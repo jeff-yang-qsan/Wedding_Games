@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="數字抽籤遊戲 - 婚禮互動遊戲，支援五人多人連線">
+    <title>數字抽籤遊戲</title>
+    
+    <!-- 預載樣式，稍後將內嵌 -->
+    <link rel="stylesheet" href="assets/css/game-styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/game-icon.png">
+    
+    <!-- PWA 支援 -->
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="數字抽籤遊戲">
+</head>
+<body>
+    <!-- 主容器 -->
+    <div id="app" class="app-container">
+        <!-- 載入畫面 -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loading-spinner"></div>
+            <h1>數字抽籤遊戲</h1>
+            <p>正在初始化...</p>
+        </div>
+
+        <!-- 角色選擇畫面 -->
+        <div id="role-selection" class="screen hidden">
+            <div class="container">
+                <h1>數字抽籤遊戲</h1>
+                <p>請選擇您的角色</p>
+                <div class="role-buttons">
+                    <button id="host-btn" class="btn btn-primary btn-large">
+                        主持人
+                        <small>建立遊戲房間</small>
+                    </button>
+                    <button id="player-btn" class="btn btn-secondary btn-large">
+                        參賽者
+                        <small>加入遊戲房間</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主持人介面 -->
+        <div id="host-screen" class="screen hidden">
+            <div class="container">
+                <h1>主持人控制台</h1>
+                
+                <!-- 遊戲設置區域 -->
+                <div id="host-content">
+                    <!-- 建立遊戲卡片 -->
+                    <div id="create-game-card" class="card">
+                        <h2>建立新遊戲</h2>
+                        <p>點擊下方按鈕開始新的數字抽籤遊戲</p>
+                        <button id="create-room-btn" class="btn btn-primary btn-large">
+                            建立新遊戲
+                            <small>生成房間代碼供參賽者加入</small>
+                        </button>
+                    </div>
+
+                    <!-- 房間資訊卡片 -->
+                    <div id="room-info-card" class="card hidden">
+                        <h2>遊戲房間資訊</h2>
+                        <div class="room-code-display">
+                            <label class="form-label">房間代碼</label>
+                            <div id="room-code" class="room-code-number"></div>
+                            <small>請參賽者輸入此代碼加入遊戲</small>
+                        </div>
+                        
+                        <div class="game-status">
+                            <div class="status-item">
+                                <span class="status-label">遊戲狀態：</span>
+                                <span id="game-state" class="status-value">等待參賽者加入</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">參賽者人數：</span>
+                                <span id="player-count" class="status-value">0/5</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">當前輪數：</span>
+                                <span id="current-round" class="status-value">1/5</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">連線狀態：</span>
+                                <span id="connection-status" class="status-value">
+                                    <span class="connection-indicator online"></span>
+                                    正常連線
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 遊戲狀態詳細資訊 -->
+                        <div class="detailed-status hidden" id="detailed-game-status">
+                            <h3>詳細遊戲狀態</h3>
+                            <div class="status-grid">
+                                <div class="status-detail">
+                                    <span class="detail-label">遊戲開始時間：</span>
+                                    <span id="game-start-time" class="detail-value">--</span>
+                                </div>
+                                <div class="status-detail">
+                                    <span class="detail-label">已進行時間：</span>
+                                    <span id="game-duration" class="detail-value">--</span>
+                                </div>
+                                <div class="status-detail">
+                                    <span class="detail-label">平均回應時間：</span>
+                                    <span id="avg-response-time" class="detail-value">--</span>
+                                </div>
+                                <div class="status-detail">
+                                    <span class="detail-label">總抽籤次數：</span>
+                                    <span id="total-draws" class="detail-value">0</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 玩家連線狀態 -->
+                            <div class="players-connection-status">
+                                <h4>玩家連線狀態</h4>
+                                <div id="players-connection-list" class="connection-list">
+                                    <!-- 玩家連線狀態將動態生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="status-actions">
+                            <button id="toggle-detailed-status" class="btn btn-outline">
+                                顯示詳細狀態
+                                <small>查看完整遊戲統計</small>
+                            </button>
+                            <button id="refresh-status" class="btn btn-outline">
+                                刷新狀態
+                                <small>更新最新資訊</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 參賽者列表卡片 -->
+                    <div id="players-list-card" class="card hidden">
+                        <h2>參賽者列表</h2>
+                        <div id="players-list" class="players-grid">
+                            <!-- 參賽者資訊將動態生成 -->
+                        </div>
+                        <div class="players-actions">
+                            <button id="start-game-btn" class="btn btn-success" disabled>
+                                開始遊戲
+                                <small>需要至少2位參賽者</small>
+                            </button>
+                            <button id="reset-game-btn" class="btn btn-danger">
+                                重新開始
+                                <small>清除所有數據</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 抽籤控制卡片 -->
+                    <div id="lottery-control-card" class="card hidden">
+                        <h2>抽籤控制</h2>
+                        <div class="lottery-status">
+                            <div class="status-item">
+                                <span class="status-label">抽籤狀態：</span>
+                                <span id="lottery-status" class="status-value">準備開始</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">已抽籤人數：</span>
+                                <span id="drawn-count" class="status-value">0/5</span>
+                            </div>
+                        </div>
+                        
+                        <div class="lottery-actions">
+                            <button id="start-lottery-btn" class="btn btn-primary btn-large">
+                                開始第一輪抽籤
+                                <small>讓參賽者開始抽取數字</small>
+                            </button>
+                            
+                            <div id="target-number-section" class="form-section hidden">
+                                <h3>設定目標數字</h3>
+                                <div class="form-group">
+                                    <label for="target-number-input" class="form-label">目標數字 (0-100)</label>
+                                    <input 
+                                        type="number" 
+                                        id="target-number-input" 
+                                        class="form-input" 
+                                        placeholder="輸入0-100之間的數字"
+                                        min="0"
+                                        max="100"
+                                        required
+                                    >
+                                </div>
+                                <button id="set-target-btn" class="btn btn-success">
+                                    確認目標數字
+                                    <small>開始計算得分</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 本輪結果卡片 -->
+                    <div id="round-results-card" class="card hidden">
+                        <h2>第<span id="current-round-display">1</span>輪結果</h2>
+                        <div class="results-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">目標數字：</span>
+                                <span id="target-number-display" class="summary-value">--</span>
+                            </div>
+                        </div>
+                        
+                        <div id="round-results-list" class="results-grid">
+                            <!-- 結果將動態生成 -->
+                        </div>
+                        
+                        <!-- 當前排名 -->
+                        <div id="current-rankings" class="rankings-section hidden">
+                            <h3>當前排名</h3>
+                            <div id="rankings-list" class="rankings-grid">
+                                <!-- 排名將動態生成 -->
+                            </div>
+                        </div>
+                        
+                        <div class="round-actions">
+                            <button id="next-round-btn" class="btn btn-primary">
+                                進行下一輪
+                                <small>開始第2輪抽籤</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 最終結果慶祝卡片 -->
+                    <div id="final-results-card" class="card hidden">
+                        <h2>🎉 遊戲結束！</h2>
+                        
+                        <!-- 獲勝者區域 -->
+                        <div id="winners-section" class="winners-celebration">
+                            <h3 id="winners-title">恭喜獲勝者！</h3>
+                            <div id="winners-list" class="winners-grid">
+                                <!-- 獲勝者將動態生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 完整排名 -->
+                        <div id="final-rankings-section" class="final-rankings">
+                            <h3>最終排名</h3>
+                            <div id="final-rankings-list" class="final-rankings-grid">
+                                <!-- 最終排名將動態生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 遊戲統計 -->
+                        <div id="game-statistics" class="game-stats">
+                            <h3>遊戲統計</h3>
+                            <div id="stats-summary" class="stats-grid">
+                                <!-- 統計資料將動態生成 -->
+                            </div>
+                        </div>
+                        
+                        <div class="final-actions">
+                            <button id="restart-game-btn" class="btn btn-secondary">
+                                重新開始遊戲
+                                <small>清除所有數據並開始新遊戲</small>
+                            </button>
+                            <button id="export-results-btn" class="btn btn-primary">
+                                匯出結果
+                                <small>下載遊戲結果 CSV 檔案</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 參賽者介面 -->
+        <div id="player-screen" class="screen hidden">
+            <div class="container">
+                <h1>參賽者介面</h1>
+                
+                <div id="player-content">
+                    <!-- 加入遊戲卡片 -->
+                    <div id="join-game-card" class="card">
+                        <h2>加入遊戲</h2>
+                        <p>輸入主持人提供的房間代碼</p>
+                        
+                        <form id="join-room-form">
+                            <div class="form-group">
+                                <label for="room-code-input" class="form-label">房間代碼</label>
+                                <input 
+                                    type="text" 
+                                    id="room-code-input" 
+                                    class="form-input" 
+                                    placeholder="請輸入4-6位數字"
+                                    maxlength="6"
+                                    pattern="[0-9]{4,6}"
+                                    required
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="nickname-input" class="form-label">暱稱</label>
+                                <input 
+                                    type="text" 
+                                    id="nickname-input" 
+                                    class="form-input" 
+                                    placeholder="請輸入您的暱稱"
+                                    maxlength="20"
+                                    required
+                                >
+                            </div>
+                            
+                            <button type="submit" id="join-room-btn" class="btn btn-primary btn-large">
+                                加入遊戲
+                                <small>驗證房間代碼並加入</small>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- 等待遊戲開始卡片 -->
+                    <div id="waiting-card" class="card hidden">
+                        <h2>等待遊戲開始</h2>
+                        <div class="waiting-info">
+                            <div class="player-info">
+                                <span class="info-label">您的暱稱：</span>
+                                <span id="my-nickname" class="info-value"></span>
+                            </div>
+                            <div class="player-info">
+                                <span class="info-label">房間代碼：</span>
+                                <span id="joined-room-code" class="info-value"></span>
+                            </div>
+                            <div class="player-info">
+                                <span class="info-label">已加入人數：</span>
+                                <span id="joined-player-count" class="info-value">1/5</span>
+                            </div>
+                            <div class="player-info">
+                                <span class="info-label">連線狀態：</span>
+                                <span id="player-connection-status" class="info-value">
+                                    <span class="connection-indicator online"></span>
+                                    已連線
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 其他玩家狀態 -->
+                        <div class="other-players-status">
+                            <h3>其他參賽者</h3>
+                            <div id="other-players-list" class="other-players-grid">
+                                <!-- 其他玩家將動態生成 -->
+                            </div>
+                        </div>
+                        
+                        <div class="waiting-message">
+                            <p>🎮 已成功加入遊戲！</p>
+                            <p>請等待主持人開始遊戲...</p>
+                        </div>
+                        
+                        <button id="leave-room-btn" class="btn btn-secondary">
+                            離開房間
+                            <small>返回加入遊戲頁面</small>
+                        </button>
+                    </div>
+
+                    <!-- 抽籤卡片 -->
+                    <div id="lottery-card" class="card hidden">
+                        <h2>第<span id="player-current-round">1</span>輪抽籤</h2>
+                        
+                        <div class="lottery-info">
+                            <div class="player-info">
+                                <span class="info-label">您的暱稱：</span>
+                                <span id="lottery-nickname" class="info-value"></span>
+                            </div>
+                            <div class="player-info">
+                                <span class="info-label">抽籤狀態：</span>
+                                <span id="lottery-player-status" class="info-value">等待開始</span>
+                            </div>
+                        </div>
+
+                        <!-- 抽籤按鈕區域 -->
+                        <div id="lottery-action-section" class="lottery-action">
+                            <div class="lottery-prompt">
+                                <p>🎲 準備抽取您的幸運數字！</p>
+                                <p>數字範圍：0 - 100</p>
+                            </div>
+                            
+                            <button id="draw-number-btn" class="btn btn-primary btn-large lottery-btn" disabled>
+                                抽取數字
+                                <small>點擊獲得隨機數字</small>
+                            </button>
+                        </div>
+
+                        <!-- 抽籤結果區域 -->
+                        <div id="lottery-result-section" class="lottery-result hidden">
+                            <div class="drawn-number-display">
+                                <label class="result-label">您抽中的數字</label>
+                                <div id="drawn-number" class="drawn-number-value">--</div>
+                            </div>
+                            
+                            <div class="result-status">
+                                <p>✅ 抽籤完成！</p>
+                                <p>請等待其他參賽者完成抽籤...</p>
+                            </div>
+                        </div>
+
+                        <!-- 本輪得分區域 -->
+                        <div id="round-score-section" class="round-score hidden">
+                            <div class="score-calculation">
+                                <div class="calc-item">
+                                    <span class="calc-label">您的數字：</span>
+                                    <span id="my-drawn-number" class="calc-value">--</span>
+                                </div>
+                                <div class="calc-item">
+                                    <span class="calc-label">目標數字：</span>
+                                    <span id="round-target-number" class="calc-value">--</span>
+                                </div>
+                                <div class="calc-item total">
+                                    <span class="calc-label">本輪得分：</span>
+                                    <span id="round-score" class="calc-value">--</span>
+                                </div>
+                            </div>
+                            
+                            <div class="score-message">
+                                <p id="score-status-message">計算中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 錯誤訊息 -->
+        <div id="error-toast" class="toast toast-error hidden">
+            <div class="toast-content">
+                <span class="toast-message"></span>
+                <button class="toast-close">&times;</button>
+            </div>
+        </div>
+
+        <!-- 成功訊息 -->
+        <div id="success-toast" class="toast toast-success hidden">
+            <div class="toast-content">
+                <span class="toast-message"></span>
+                <button class="toast-close">&times;</button>
+            </div>
+        </div>
+
+        <!-- 確認對話框 -->
+        <div id="confirmation-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">確認操作</h3>
+                    <button id="modal-close" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="modal-message">您確定要執行此操作嗎？</p>
+                    <div id="modal-details" class="modal-details hidden">
+                        <!-- 詳細資訊將動態填入 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-cancel" class="btn btn-secondary">
+                        取消
+                    </button>
+                    <button id="modal-confirm" class="btn btn-danger">
+                        確認
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 連線狀態指示器 -->
+        <div id="connection-indicator" class="connection-status-bar">
+            <div class="connection-info">
+                <span class="connection-dot online" id="connection-dot"></span>
+                <span class="connection-text" id="connection-text">正常連線</span>
+                <span class="connection-details" id="connection-details">5/5 玩家在線</span>
+            </div>
+            <div class="connection-actions">
+                <button id="reconnect-btn" class="btn btn-sm btn-outline hidden">
+                    重新連線
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 模組將在後續任務中載入 -->
+    <script src="assets/js/storage-manager.js"></script>
+    <script src="assets/js/webrtc-manager.js"></script>
+    <script src="assets/js/game-engine.js"></script>
+    <script src="assets/js/ui-controller.js"></script>
+    <script src="assets/js/error-handler.js"></script>
+    <script src="assets/js/game-controller.js"></script>
+    
+    <script>
+        // 初始化應用程式
+        document.addEventListener('DOMContentLoaded', function() {
+            // 隱藏載入畫面，顯示角色選擇
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('role-selection').classList.remove('hidden');
+            }, 1000);
+            
+            // 角色選擇事件監聽器
+            document.getElementById('host-btn').addEventListener('click', function() {
+                document.getElementById('role-selection').classList.add('hidden');
+                document.getElementById('host-screen').classList.remove('hidden');
+            });
+            
+            document.getElementById('player-btn').addEventListener('click', function() {
+                document.getElementById('role-selection').classList.add('hidden');
+                document.getElementById('player-screen').classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>

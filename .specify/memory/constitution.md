@@ -1,50 +1,71 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- 
+Sync Impact Report:
+- Version: N/A → 1.0.0 (初始版本)
+- New constitution created for Wedding Games project
+- Templates alignment: ✅ All templates compatible with constitution principles
+- Language: All content converted to Traditional Chinese as requested
+- Follow-up: None - complete constitution established
+-->
 
-## Core Principles
+# Wedding Games 專案憲章
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## 核心原則
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### 一、最小可行產品優先 (MVP First)
+每個功能都必須以最小可行產品為起點。產品必須能夠獨立測試、獨立部署、獨立提供價值。避免過度設計，優先實作核心功能再進行擴展。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**理由**: 婚禮遊戲需要快速驗證概念，確保核心遊戲機制可行後再添加複雜功能。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### 二、測試驅動開發 (非協商原則)
+必須嚴格執行測試驅動開發：撰寫測試 → 用戶確認 → 測試失敗 → 實作功能。遵循紅燈-綠燈-重構循環。每個用戶故事都必須有獨立的驗收測試。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**理由**: 婚禮遊戲在活動現場必須穩定運行，沒有重來的機會，因此代碼品質至關重要。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### 三、正體中文優先
+所有面向用戶的內容、文檔、註釋都必須使用正體中文。代碼可使用英文，但所有說明文字必須是正體中文。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**理由**: 目標用戶為華語使用者，提供最佳的用戶體驗。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### 四、獨立功能模組化
+每個遊戲功能都必須設計為獨立模組，具備清晰的輸入輸出介面。模組之間透過明確定義的合約進行通信，支援單獨測試和部署。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**理由**: 婚禮現場可能需要臨時調整遊戲內容，模組化設計提供最大彈性。
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### 五、即時性能保證
+所有遊戲互動的回應時間必須在500毫秒內完成。系統必須支援至少50位同時參與者而不影響效能。
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+**理由**: 婚禮遊戲需要即時互動體驗，延遲會影響活動氣氛和參與度。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+## 技術約束
+
+### 平台相容性
+- 必須支援主流行動裝置瀏覽器 (iOS Safari, Android Chrome)
+- 必須支援離線基本功能 (網路不穩定時)
+- 必須提供響應式設計適配不同螢幕尺寸
+
+### 資料安全
+- 個人資料處理必須符合隱私保護原則
+- 遊戲資料必須提供本地備份機制
+- 敏感資訊不得儲存於客戶端
+
+## 開發流程
+
+### 功能開發週期
+1. 用戶故事定義與優先級排序
+2. 驗收測試撰寫
+3. 最小可行產品實作
+4. 整合測試與效能驗證
+5. 用戶測試與回饋收集
+
+### 品質把關
+- 所有程式碼變更都必須通過自動化測試
+- 新功能必須包含使用說明文檔
+- 效能測試必須涵蓋預期負載情境
+
+## 治理規範
+
+本憲章優先於所有其他開發實務。憲章修訂需要記錄變更理由、影響評估和遷移計畫。
+
+所有合併請求和代碼審查都必須驗證是否符合憲章原則。複雜度增加必須有充分理由。開發指引請參考專案文檔。
+
+**版本**: 1.0.0 | **通過日期**: 2026-01-12 | **最後修訂**: 2026-01-12
