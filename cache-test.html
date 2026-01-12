@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>強制刷新測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .test-box { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+        }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 強制刷新快取測試</h1>
+    
+    <div class="test-box">
+        <h3>強制載入測試</h3>
+        <p>這個測試會強制重新載入所有 JavaScript 檔案，繞過瀏覽器快取。</p>
+        <button onclick="forceReloadTest()">強制重新載入測試</button>
+        <div id="force-result"></div>
+    </div>
+    
+    <div class="test-box">
+        <h3>即時檢查</h3>
+        <button onclick="checkCurrentState()">檢查當前狀態</button>
+        <div id="current-result"></div>
+    </div>
+    
+    <div class="test-box">
+        <h3>主遊戲測試</h3>
+        <button onclick="location.href='index.html?t=' + Date.now()">開啟主遊戲（強制刷新）</button>
+        <button onclick="location.href='index.html'">開啟主遊戲（正常）</button>
+    </div>
+
+    <script>
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+        
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+        
+        async function forceReloadTest() {
+            clearResults('force-result');
+            addResult('force-result', '開始強制重新載入測試...', 'info');
+            
+            // 清除現有的腳本
+            const existingScripts = document.querySelectorAll('script[src*="assets/js/"]');
+            existingScripts.forEach(script => {
+                script.remove();
+                addResult('force-result', `移除現有腳本: ${script.src}`, 'info');
+            });
+            
+            // 清除全域變數
+            const classNames = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+            classNames.forEach(name => {
+                if (window[name]) {
+                    delete window[name];
+                    addResult('force-result', `清除全域變數: ${name}`, 'info');
+                }
+            });
+            
+            // 強制重新載入腳本（加上時間戳繞過快取）
+            const timestamp = Date.now();
+            const scripts = [
+                'assets/js/storage-manager.js',
+                'assets/js/error-handler.js',
+                'assets/js/game-engine.js',
+                'assets/js/webrtc-manager.js',
+                'assets/js/ui-controller.js',
+                'assets/js/game-controller.js'
+            ];
+            
+            let loadedCount = 0;
+            for (const scriptSrc of scripts) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = `${scriptSrc}?v=${timestamp}`;
+                        script.onload = () => {
+                            addResult('force-result', `✅ ${scriptSrc} 強制重新載入成功`, 'success');
+                            loadedCount++;
+                            resolve();
+                        };
+                        script.onerror = () => {
+                            addResult('force-result', `❌ ${scriptSrc} 強制重新載入失敗`, 'error');
+                            reject(new Error('Load failed'));
+                        };
+                        document.head.appendChild(script);
+                    });
+                } catch (error) {
+                    addResult('force-result', `❌ ${scriptSrc} 載入錯誤: ${error.message}`, 'error');
+                }
+            }
+            
+            // 等待腳本執行
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 檢查類別定義
+            let definedCount = 0;
+            for (const className of classNames) {
+                if (typeof window[className] !== 'undefined') {
+                    addResult('force-result', `✅ ${className} 已定義`, 'success');
+                    definedCount++;
+                } else {
+                    addResult('force-result', `❌ ${className} 未定義`, 'error');
+                }
+            }
+            
+            addResult('force-result', `載入結果: ${loadedCount}/${scripts.length} 檔案, ${definedCount}/${classNames.length} 類別`, 
+                      definedCount === classNames.length ? 'success' : 'error');
+            
+            // 特別測試 WebRTCManager
+            if (typeof WebRTCManager !== 'undefined') {
+                try {
+                    const manager = new WebRTCManager();
+                    addResult('force-result', '🎉 WebRTCManager 實例化測試成功！', 'success');
+                } catch (error) {
+                    addResult('force-result', `❌ WebRTCManager 實例化失敗: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        function checkCurrentState() {
+            clearResults('current-result');
+            
+            const classes = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+            let definedCount = 0;
+            
+            for (const className of classes) {
+                if (typeof window[className] !== 'undefined') {
+                    addResult('current-result', `✅ ${className} 當前已定義`, 'success');
+                    definedCount++;
+                } else {
+                    addResult('current-result', `❌ ${className} 當前未定義`, 'error');
+                }
+            }
+            
+            addResult('current-result', `當前狀態: ${definedCount}/${classes.length} 類別已定義`, 
+                      definedCount === classes.length ? 'success' : 'info');
+            
+            // 檢查腳本標籤
+            const scriptTags = document.querySelectorAll('script[src*="assets/js/"]');
+            addResult('current-result', `已載入的腳本標籤數量: ${scriptTags.length}`, 'info');
+            
+            scriptTags.forEach(script => {
+                addResult('current-result', `腳本: ${script.src}`, 'info');
+            });
+        }
+        
+        // 頁面載入時檢查
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('current-result', '頁面已載入，可以開始測試', 'info');
+        });
+        
+        // 錯誤監聽
+        window.addEventListener('error', (event) => {
+            addResult('current-result', `🚨 全域錯誤: ${event.message} (${event.filename}:${event.lineno})`, 'error');
+        });
+    </script>
+</body>
+</html>

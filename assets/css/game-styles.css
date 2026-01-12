@@ -11,6 +11,10 @@
 html {
     font-size: 16px;
     scroll-behavior: smooth;
+    /* 提升渲染性能 */
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -19,6 +23,9 @@ body {
     color: #1f2937;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
+    /* 性能優化 */
+    contain: layout style paint;
+    will-change: auto;
 }
 
 /* 主要佈局容器 */
@@ -43,10 +50,14 @@ body {
     justify-content: center;
     padding: 1rem;
     transition: opacity 0.3s ease-in-out;
+    /* 性能優化 */
+    contain: layout style;
+    will-change: opacity;
 }
 
 .screen.hidden {
     display: none;
+    will-change: auto;
 }
 
 /* 載入畫面 */
@@ -1657,7 +1668,59 @@ small {
 }
 
 /* 響應式調整 */
-@media (max-width: 640px) {
+/* 額外的響應式斷點 - 更細緻的裝置支援 */
+
+/* 超小螢幕 (小於 480px) */
+@media (max-width: 479px) {
+    .container {
+        padding: 0.5rem;
+    }
+    
+    .card {
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .players-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 中等手機螢幕 (480px - 639px) */
+@media (min-width: 480px) and (max-width: 639px) {
+    .players-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .results-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 大手機螢幕 (640px - 767px) */
+@media (min-width: 640px) and (max-width: 767px) {
+    .players-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .results-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .container {
+        padding: 1.5rem;
+    }
+}
     .status-grid {
         grid-template-columns: 1fr;
     }
@@ -1704,5 +1767,223 @@ small {
 @media (min-width: 1024px) {
     .status-grid {
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ==================== Phase 7: 載入狀態和進度指示器樣式 ==================== */
+
+/* 載入旋轉器 */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 按鈕載入狀態 */
+.btn.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.btn.loading .loading-spinner {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+}
+
+/* 元素載入覆蓋層 */
+.loading-overlay {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+}
+
+.loading-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.loading-message {
+    font-size: 0.9rem;
+}
+
+/* 進度條 */
+.progress-container {
+    width: 100%;
+    margin: 1rem 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: inherit;
+    transition: width 0.3s ease-out;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-message {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* 連線狀態指示器 */
+.connection-indicator {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 1000;
+    transition: all 0.3s ease-in-out;
+    border: 2px solid transparent;
+}
+
+.connection-indicator.status-connected {
+    border-color: #10b981;
+    color: #065f46;
+}
+
+.connection-indicator.status-connecting {
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+.connection-indicator.status-connecting .status-icon {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.connection-indicator.status-disconnected {
+    border-color: #ef4444;
+    color: #991b1b;
+}
+
+.connection-indicator.status-error {
+    border-color: #f97316;
+    color: #9a3412;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-icon {
+    font-size: 1rem;
+}
+
+.status-text {
+    font-weight: 500;
+}
+
+/* 載入狀態的響應式設計 */
+@media (max-width: 640px) {
+    .connection-indicator {
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .loading-content {
+        font-size: 0.8rem;
+    }
+    
+    .progress-message {
+        font-size: 0.8rem;
+    }
+}
+
+/* 高對比度模式的載入狀態 */
+@media (prefers-contrast: high) {
+    .loading-overlay::before {
+        background: rgba(255, 255, 255, 0.95);
+    }
+    
+    .connection-indicator {
+        border-width: 3px;
+    }
+}
+
+/* 減少動畫模式 */
+@media (prefers-reduced-motion: reduce) {
+    .loading-spinner {
+        animation: none;
+        border-top-color: transparent;
+    }
+    
+    .progress-fill::after {
+        animation: none;
+    }
+    
+    .connection-indicator.status-connecting .status-icon {
+        animation: none;
     }
 }

@@ -16,18 +16,30 @@ class ErrorHandler {
     init() {
         if (this.isInitialized) return;
 
-        // 設定全域錯誤處理
-        window.addEventListener('error', (event) => {
-            this.handleGlobalError(event.error, event.filename, event.lineno);
-        });
+        // 延遲設定全域錯誤處理，避免在初始化期間干擾
+        setTimeout(() => {
+            // 檢查初始化是否已經完成
+            if (window.initializationComplete) {
+                // 設定全域錯誤處理
+                window.addEventListener('error', (event) => {
+                    this.handleGlobalError(event.error, event.filename, event.lineno);
+                });
 
-        // 設定 Promise 拒絕處理
-        window.addEventListener('unhandledrejection', (event) => {
-            this.handlePromiseRejection(event.reason);
-        });
+                // 設定 Promise 拒絕處理
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.handlePromiseRejection(event.reason);
+                });
 
-        // 設定 console 攔截
-        this.interceptConsoleErrors();
+                // 設定 console 攔截
+                this.interceptConsoleErrors();
+                
+                console.log('全域錯誤監聽器已設定');
+            } else {
+                console.log('等待初始化完成後再設定錯誤監聽器');
+                // 如果初始化還沒完成，再延遲一點
+                setTimeout(() => this.init(), 500);
+            }
+        }, 1500); // 延遲 1.5 秒讓其他組件完成初始化
 
         this.isInitialized = true;
         console.log('錯誤處理框架已初始化');
@@ -37,9 +49,15 @@ class ErrorHandler {
      * 處理全域錯誤
      */
     handleGlobalError(error, filename, lineno) {
+        // 防止初始化期間的錯誤處理造成無限迴圈
+        if (!this.isInitialized) {
+            console.warn('ErrorHandler 尚未完全初始化，跳過錯誤處理');
+            return;
+        }
+        
         const errorInfo = {
-            message: error.message || '未知錯誤',
-            stack: error.stack || '',
+            message: error?.message || '未知錯誤',
+            stack: error?.stack || '',
             filename: filename || '',
             lineno: lineno || 0,
             timestamp: new Date().toISOString(),
@@ -48,9 +66,23 @@ class ErrorHandler {
 
         this.logError(errorInfo);
         
+        // 檢查是否為初始化相關的錯誤，如果是則不顯示用戶錯誤
+        const initializationErrors = ['類別', 'class', 'undefined', 'not defined', 'ReferenceError'];
+        const isInitError = initializationErrors.some(keyword => 
+            errorInfo.message.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        if (isInitError) {
+            console.error('偵測到初始化錯誤，詳細資訊：', errorInfo);
+            return; // 不顯示用戶錯誤訊息
+        }
+        
         // 顯示用戶友好的錯誤訊息
-        if (window.uiController) {
+        if (window.uiController && typeof window.uiController.showError === 'function') {
             window.uiController.showError('系統發生錯誤，請重新整理頁面');
+        } else {
+            // 如果 UIController 還沒初始化，記錄但不彈出 alert
+            console.error('UIController 尚未初始化，錯誤詳情：', errorInfo);
         }
     }
 
@@ -142,8 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. 初始化存儲管理器 (已自動初始化)
     // 2. 初始化 WebRTC 管理器 (已自動初始化)  
     // 3. 增強 WebRTC 連線管理
-    if (window.webrtcManager && window.webrtcManager.enhanceConnectionManagement) {
-        window.webrtcManager.enhanceConnectionManagement();
+    if (window.webRTCManager && window.webRTCManager.enhanceConnectionManagement) {
+        window.webRTCManager.enhanceConnectionManagement();
     }
     
     // 4. 初始化遊戲引擎狀態驗證 (T010 已實現)

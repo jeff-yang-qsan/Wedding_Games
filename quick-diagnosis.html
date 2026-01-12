@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊戲快速診斷</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+        }
+        .success { 
+            background: #d4edda; 
+            border-left: 4px solid #28a745; 
+        }
+        .error { 
+            background: #f8d7da; 
+            border-left: 4px solid #dc3545; 
+        }
+        .info { 
+            background: #d1ecf1; 
+            border-left: 4px solid #17a2b8; 
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 數字抽籤遊戲 - 快速診斷</h1>
+        
+        <div id="summary">
+            <div id="status-overall" class="status info">正在初始化診斷工具...</div>
+        </div>
+        
+        <div>
+            <button class="btn" onclick="runFullDiagnosis()">🔍 執行完整診斷</button>
+            <button class="btn" onclick="testMainGame()">🎯 測試主遊戲</button>
+            <button class="btn" onclick="clearLog()">🗑️ 清除記錄</button>
+            <button class="btn" onclick="location.href='index.html'">🎮 返回遊戲</button>
+        </div>
+        
+        <h2>診斷記錄</h2>
+        <div id="log"></div>
+        
+        <div style="margin-top: 20px; font-size: 12px; color: #666;">
+            <p><strong>使用說明：</strong></p>
+            <ul>
+                <li>點擊 "執行完整診斷" 檢查所有系統組件</li>
+                <li>點擊 "測試主遊戲" 直接測試遊戲功能</li>
+                <li>開啟瀏覽器開發者工具（F12）查看詳細錯誤訊息</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const statusOverall = document.getElementById('status-overall');
+        let logEntries = [];
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = `[${timestamp}] ${message}`;
+            logEntries.push({entry, type});
+            
+            const div = document.createElement('div');
+            div.textContent = entry;
+            div.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue';
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            
+            console.log(entry);
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+            logEntries = [];
+        }
+        
+        function updateOverallStatus(message, type = 'info') {
+            statusOverall.textContent = message;
+            statusOverall.className = `status ${type}`;
+        }
+        
+        async function runFullDiagnosis() {
+            clearLog();
+            addLog('開始執行完整系統診斷', 'info');
+            updateOverallStatus('正在執行診斷...', 'info');
+            
+            let passedTests = 0;
+            let totalTests = 0;
+            
+            // 測試 1: 檢查 JavaScript 檔案存在性
+            addLog('=== 檢查 JavaScript 檔案 ===', 'info');
+            const jsFiles = [
+                'assets/js/storage-manager.js',
+                'assets/js/webrtc-manager.js',
+                'assets/js/game-engine.js', 
+                'assets/js/ui-controller.js',
+                'assets/js/error-handler.js',
+                'assets/js/game-controller.js'
+            ];
+            
+            for (const file of jsFiles) {
+                totalTests++;
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        addLog(`✓ ${file} 檔案存在`, 'success');
+                        passedTests++;
+                    } else {
+                        addLog(`✗ ${file} 檔案無法存取 (${response.status})`, 'error');
+                    }
+                } catch (error) {
+                    addLog(`✗ ${file} 載入失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            // 測試 2: 動態載入並檢查類別
+            addLog('=== 測試類別載入 ===', 'info');
+            const requiredClasses = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+            
+            try {
+                // 動態載入所有腳本
+                await loadAllScripts(jsFiles);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 等待腳本執行
+                
+                for (const className of requiredClasses) {
+                    totalTests++;
+                    if (typeof window[className] !== 'undefined') {
+                        addLog(`✓ 類別 ${className} 已定義`, 'success');
+                        passedTests++;
+                    } else {
+                        addLog(`✗ 類別 ${className} 未定義`, 'error');
+                    }
+                }
+            } catch (error) {
+                addLog(`✗ 腳本載入失敗: ${error.message}`, 'error');
+            }
+            
+            // 測試 3: 檢查 DOM 元素
+            addLog('=== 檢查 DOM 元素 ===', 'info');
+            const requiredElements = [
+                'loading-screen', 'role-selection', 'host-screen', 'player-screen',
+                'host-btn', 'player-btn', 'create-room-btn'
+            ];
+            
+            // 先載入主頁面來檢查元素
+            try {
+                const response = await fetch('index.html');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                for (const elementId of requiredElements) {
+                    totalTests++;
+                    const element = doc.getElementById(elementId);
+                    if (element) {
+                        addLog(`✓ 找到元素 #${elementId}`, 'success');
+                        passedTests++;
+                    } else {
+                        addLog(`✗ 缺少元素 #${elementId}`, 'error');
+                    }
+                }
+            } catch (error) {
+                addLog(`✗ 無法檢查 DOM 元素: ${error.message}`, 'error');
+            }
+            
+            // 測試 4: 初始化測試
+            addLog('=== 測試初始化 ===', 'info');
+            if (typeof StorageManager !== 'undefined') {
+                totalTests++;
+                try {
+                    const storage = new StorageManager();
+                    addLog('✓ StorageManager 初始化成功', 'success');
+                    passedTests++;
+                } catch (error) {
+                    addLog(`✗ StorageManager 初始化失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            if (typeof ErrorHandler !== 'undefined') {
+                totalTests++;
+                try {
+                    const errorHandler = new ErrorHandler();
+                    addLog('✓ ErrorHandler 初始化成功', 'success');
+                    passedTests++;
+                } catch (error) {
+                    addLog(`✗ ErrorHandler 初始化失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            // 最終結果
+            const successRate = ((passedTests / totalTests) * 100).toFixed(1);
+            addLog(`=== 診斷完成 ===`, 'info');
+            addLog(`通過測試: ${passedTests}/${totalTests} (${successRate}%)`, passedTests === totalTests ? 'success' : 'error');
+            
+            if (passedTests === totalTests) {
+                updateOverallStatus('✅ 所有測試通過！系統運行正常', 'success');
+            } else {
+                updateOverallStatus(`❌ 測試失敗 ${totalTests - passedTests} 項，成功率 ${successRate}%`, 'error');
+            }
+        }
+        
+        async function loadAllScripts(scripts) {
+            const promises = scripts.map(src => {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            });
+            
+            return Promise.all(promises);
+        }
+        
+        function testMainGame() {
+            addLog('=== 測試主遊戲 ===', 'info');
+            
+            // 在新視窗開啟主遊戲進行測試
+            const gameWindow = window.open('index.html', '_blank');
+            
+            if (gameWindow) {
+                addLog('✓ 主遊戲已在新視窗開啟', 'success');
+                addLog('請檢查新視窗是否正常顯示遊戲介面', 'info');
+                
+                // 監聽視窗關閉
+                const checkClosed = setInterval(() => {
+                    if (gameWindow.closed) {
+                        addLog('主遊戲視窗已關閉', 'info');
+                        clearInterval(checkClosed);
+                    }
+                }, 1000);
+            } else {
+                addLog('✗ 無法開啟主遊戲視窗（可能被彈出式視窗阻擋）', 'error');
+            }
+        }
+        
+        // 頁面載入完成後的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateOverallStatus('📋 診斷工具已準備就緒，點擊按鈕開始測試', 'info');
+            addLog('診斷工具載入完成', 'success');
+            addLog('點擊 "執行完整診斷" 開始系統檢查', 'info');
+        });
+        
+        // 全域錯誤監聽
+        window.addEventListener('error', (event) => {
+            addLog(`全域錯誤: ${event.message} (${event.filename}:${event.lineno})`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            addLog(`未處理的 Promise 拒絕: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

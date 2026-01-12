@@ -9,11 +9,14 @@ class UIController {
         this.eventListeners = new Map();
         this.toastTimeout = null;
         this.isInitialized = false;
+        this.loadingStates = new Set(); // Phase 7: 載入狀態管理
         
         // 綁定方法到實例
         this.showScreen = this.showScreen.bind(this);
         this.showToast = this.showToast.bind(this);
         this.hideToast = this.hideToast.bind(this);
+        this.showLoading = this.showLoading.bind(this);
+        this.hideLoading = this.hideLoading.bind(this);
     }
 
     /**
@@ -198,6 +201,16 @@ class UIController {
      * @param {number} duration - 顯示時長
      */
     showSuccess(message, duration = 3000) {
+        this.showToast('success', message, duration);
+    }
+
+    /**
+     * 顯示信息訊息
+     * @param {string} message - 信息訊息
+     * @param {number} duration - 顯示時間（毫秒）
+     */
+    showInfo(message, duration = 3000) {
+        // 使用 success 類型顯示信息（因為沒有專門的 info toast）
         this.showToast('success', message, duration);
     }
 
@@ -511,6 +524,45 @@ class UIController {
     }
 
     /**
+     * 更新參賽者介面的個人信息
+     * @param {Object} player - 參賽者對象，包含 nickname, roomCode 等信息
+     */
+    updatePlayerInfo(player) {
+        console.log('更新參賽者信息:', player);
+        
+        // 更新暱稱顯示
+        const myNicknameElements = [
+            document.getElementById('my-nickname'),
+            document.getElementById('lottery-nickname')
+        ];
+        
+        myNicknameElements.forEach(element => {
+            if (element && player.nickname) {
+                element.textContent = player.nickname;
+            }
+        });
+
+        // 更新房間代碼顯示
+        const joinedRoomCodeElement = document.getElementById('joined-room-code');
+        if (joinedRoomCodeElement && player.roomCode) {
+            joinedRoomCodeElement.textContent = player.roomCode;
+        }
+
+        // 隱藏加入遊戲卡片，顯示等待卡片
+        const joinGameCard = document.getElementById('join-game-card');
+        const waitingCard = document.getElementById('waiting-card');
+        
+        if (joinGameCard) {
+            joinGameCard.classList.add('hidden');
+        }
+        if (waitingCard) {
+            waitingCard.classList.remove('hidden');
+        }
+
+        console.log('參賽者信息更新完成');
+    }
+
+    /**
      * 更新開始遊戲按鈕狀態
      * @param {number} playerCount - 參賽者數量
      */
@@ -564,6 +616,118 @@ class UIController {
         if (createGameCard) createGameCard.classList.add('hidden');
         if (roomInfoCard) roomInfoCard.classList.remove('hidden');
         if (playersListCard) playersListCard.classList.remove('hidden');
+    }
+
+    /**
+     * 顯示主持人 Peer ID 供參賽者連接
+     * @param {string} hostPeerId - 主持人的 Peer ID
+     */
+    displayHostPeerId(hostPeerId) {
+        console.log(`顯示主持人 Peer ID: ${hostPeerId}`);
+        
+        // 創建連接資訊元素
+        let connectionInfoDiv = document.getElementById('connection-info');
+        if (!connectionInfoDiv) {
+            connectionInfoDiv = document.createElement('div');
+            connectionInfoDiv.id = 'connection-info';
+            connectionInfoDiv.className = 'connection-info card';
+            connectionInfoDiv.innerHTML = `
+                <h3>參賽者連接資訊</h3>
+                <div class="connection-details">
+                    <div class="info-item">
+                        <span class="info-label">連接方式一：直接連結</span>
+                        <div class="connection-url">
+                            <input type="text" id="connection-url" readonly>
+                            <button id="copy-url-btn" class="btn btn-sm">複製</button>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">連接方式二：手動輸入</span>
+                        <div class="peer-id-display">
+                            <span>主持人ID: </span>
+                            <code id="host-peer-id">${hostPeerId}</code>
+                            <button id="copy-peer-id-btn" class="btn btn-sm">複製</button>
+                        </div>
+                        <small>參賽者在加入房間頁面的 URL 後加上: ?join=${hostPeerId}</small>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">QR Code (如支援)</span>
+                        <div id="qr-code-container"></div>
+                    </div>
+                </div>
+            `;
+            
+            // 插入到房間資訊卡片後面
+            const roomInfoCard = document.getElementById('room-info-card');
+            if (roomInfoCard) {
+                roomInfoCard.parentNode.insertBefore(connectionInfoDiv, roomInfoCard.nextSibling);
+            }
+        }
+        
+        // 設定連接 URL
+        const connectionUrl = `${window.location.origin}${window.location.pathname}?join=${hostPeerId}`;
+        const connectionUrlInput = document.getElementById('connection-url');
+        if (connectionUrlInput) {
+            connectionUrlInput.value = connectionUrl;
+        }
+        
+        // 設定複製按鈕事件
+        const copyUrlBtn = document.getElementById('copy-url-btn');
+        const copyPeerIdBtn = document.getElementById('copy-peer-id-btn');
+        
+        if (copyUrlBtn) {
+            copyUrlBtn.addEventListener('click', () => {
+                if (connectionUrlInput) {
+                    connectionUrlInput.select();
+                    document.execCommand('copy');
+                    this.showToast('success', '連接連結已複製到剪貼簿');
+                }
+            });
+        }
+        
+        if (copyPeerIdBtn) {
+            copyPeerIdBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(hostPeerId).then(() => {
+                    this.showToast('success', '主持人ID已複製到剪貼簿');
+                }).catch(() => {
+                    // 降級方法
+                    const tempInput = document.createElement('input');
+                    tempInput.value = hostPeerId;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    this.showToast('success', '主持人ID已複製到剪貼簿');
+                });
+            });
+        }
+        
+        // 嘗試生成 QR Code (如果有相關函式庫)
+        this.generateQRCode(connectionUrl);
+    }
+
+    /**
+     * 生成 QR Code (簡化版)
+     * @param {string} url - 要編碼的 URL
+     */
+    generateQRCode(url) {
+        const qrContainer = document.getElementById('qr-code-container');
+        if (!qrContainer) return;
+        
+        try {
+            // 使用 Google Chart API 生成 QR Code
+            const qrSize = 150;
+            const qrImageUrl = `https://chart.googleapis.com/chart?chs=${qrSize}x${qrSize}&cht=qr&chl=${encodeURIComponent(url)}`;
+            
+            qrContainer.innerHTML = `
+                <img src="${qrImageUrl}" alt="QR Code" style="max-width: ${qrSize}px;">
+                <br><small>掃描此 QR Code 直接加入遊戲</small>
+            `;
+            
+        } catch (error) {
+            console.warn('無法生成 QR Code:', error);
+            qrContainer.innerHTML = '<small>QR Code 生成失敗</small>';
+        }
     }
 
     /**
@@ -695,11 +859,29 @@ class UIController {
      * @param {Object} playerData - 參賽者資料
      */
     showPlayerLottery(playerData) {
+        console.log('UIController.showPlayerLottery 被調用:', playerData);
+        
         const waitingCard = document.getElementById('waiting-card');
         const lotteryCard = document.getElementById('lottery-card');
 
-        if (waitingCard) waitingCard.classList.add('hidden');
-        if (lotteryCard) lotteryCard.classList.remove('hidden');
+        console.log('找到的元素:', { 
+            waitingCard: !!waitingCard, 
+            lotteryCard: !!lotteryCard 
+        });
+
+        if (waitingCard) {
+            waitingCard.classList.add('hidden');
+            console.log('hiding waiting-card');
+        } else {
+            console.log('waiting-card 元素不存在');
+        }
+        
+        if (lotteryCard) {
+            lotteryCard.classList.remove('hidden');
+            console.log('showing lottery-card');
+        } else {
+            console.log('lottery-card 元素不存在');
+        }
 
         // 更新參賽者資訊
         const lotteryNicknameElement = document.getElementById('lottery-nickname');
@@ -763,11 +945,20 @@ class UIController {
 
         if (drawNumberBtn) {
             drawNumberBtn.disabled = false;
-            drawNumberBtn.querySelector('small').textContent = '點擊獲得隨機數字';
+            const smallElement = drawNumberBtn.querySelector('small');
+            if (smallElement) {
+                smallElement.textContent = '點擊獲得隨機數字';
+            } else {
+                console.warn('draw-number-btn 中的 small 元素未找到');
+            }
+        } else {
+            console.warn('draw-number-btn 元素未找到');
         }
 
         if (lotteryPlayerStatus) {
             lotteryPlayerStatus.textContent = '可以抽籤';
+        } else {
+            console.warn('lottery-player-status 元素未找到');
         }
     }
 
@@ -1293,8 +1484,8 @@ class UIController {
 
         // 更新平均回應時間
         const avgResponseTime = document.getElementById('avg-response-time');
-        if (avgResponseTime && window.webrtcManager) {
-            const responseTime = window.webrtcManager.getAverageResponseTime();
+        if (avgResponseTime && window.webRTCManager) {
+            const responseTime = window.webRTCManager.getAverageResponseTime();
             avgResponseTime.textContent = responseTime > 0 ? `${responseTime}ms` : '--';
         }
 
@@ -1344,8 +1535,8 @@ class UIController {
      * 刷新遊戲狀態
      */
     refreshGameStatus() {
-        if (window.webrtcManager) {
-            window.webrtcManager.requestGameState();
+        if (window.webRTCManager) {
+            window.webRTCManager.requestGameState();
         }
         
         this.updateDetailedGameStatus();
@@ -1435,8 +1626,8 @@ class UIController {
             }
 
             // 通過 WebRTC 通知重置
-            if (window.webrtcManager) {
-                window.webrtcManager.resetGame('manual');
+            if (window.webRTCManager) {
+                window.webRTCManager.resetGame('manual');
             }
 
             // 重置 UI 到初始狀態
@@ -1491,7 +1682,7 @@ class UIController {
      * 處理重新連線
      */
     handleReconnect() {
-        if (window.webrtcManager) {
+        if (window.webRTCManager) {
             // 觸發重新連線邏輯
             window.dispatchEvent(new CustomEvent('reconnectRequested'));
             this.showToast('info', '正在重新連線...');
@@ -1634,6 +1825,167 @@ class UIController {
         };
         
         return stateMap[gameState] || gameState;
+    }
+
+    // ==================== Phase 7: 載入狀態和進度指示器 ====================
+
+    /**
+     * 顯示載入狀態
+     * @param {string} elementId - 元素 ID
+     * @param {string} message - 載入訊息
+     */
+    showLoading(elementId, message = '載入中...') {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // 添加載入狀態
+        this.loadingStates.add(elementId);
+        
+        // 禁用按鈕或添加載入樣式
+        if (element.tagName === 'BUTTON') {
+            element.disabled = true;
+            element.classList.add('loading');
+            const originalText = element.innerHTML;
+            element.dataset.originalText = originalText;
+            element.innerHTML = `
+                <span class="loading-spinner"></span>
+                ${message}
+            `;
+        } else {
+            element.classList.add('loading-overlay');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-content';
+            loadingDiv.innerHTML = `
+                <span class="loading-spinner"></span>
+                <span class="loading-message">${message}</span>
+            `;
+            element.appendChild(loadingDiv);
+        }
+    }
+
+    /**
+     * 隱藏載入狀態
+     * @param {string} elementId - 元素 ID
+     */
+    hideLoading(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // 移除載入狀態
+        this.loadingStates.delete(elementId);
+        
+        if (element.tagName === 'BUTTON') {
+            element.disabled = false;
+            element.classList.remove('loading');
+            if (element.dataset.originalText) {
+                element.innerHTML = element.dataset.originalText;
+                delete element.dataset.originalText;
+            }
+        } else {
+            element.classList.remove('loading-overlay');
+            const loadingContent = element.querySelector('.loading-content');
+            if (loadingContent) {
+                loadingContent.remove();
+            }
+        }
+    }
+
+    /**
+     * 顯示進度條
+     * @param {string} elementId - 進度條容器 ID
+     * @param {number} progress - 進度百分比 (0-100)
+     * @param {string} message - 進度訊息
+     */
+    showProgress(elementId, progress, message = '') {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+
+        let progressBar = container.querySelector('.progress-bar');
+        if (!progressBar) {
+            container.innerHTML = `
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-message"></div>
+                </div>
+            `;
+            progressBar = container.querySelector('.progress-bar');
+        }
+
+        const progressFill = progressBar.querySelector('.progress-fill');
+        const progressMessage = container.querySelector('.progress-message');
+
+        if (progressFill) {
+            progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+        }
+        
+        if (progressMessage && message) {
+            progressMessage.textContent = message;
+        }
+    }
+
+    /**
+     * 隱藏進度條
+     * @param {string} elementId - 進度條容器 ID
+     */
+    hideProgress(elementId) {
+        const container = document.getElementById(elementId);
+        if (!container) return;
+
+        const progressContainer = container.querySelector('.progress-container');
+        if (progressContainer) {
+            progressContainer.remove();
+        }
+    }
+
+    /**
+     * 顯示網路連線狀態指示器
+     * @param {string} status - 連線狀態: 'connected', 'connecting', 'disconnected', 'error'
+     * @param {string} message - 狀態訊息
+     */
+    showConnectionStatus(status, message = '') {
+        let indicator = document.getElementById('connection-indicator');
+        
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'connection-indicator';
+            indicator.className = 'connection-indicator';
+            document.body.appendChild(indicator);
+        }
+
+        // 移除舊的狀態類別
+        indicator.className = 'connection-indicator';
+        indicator.classList.add(`status-${status}`);
+
+        const statusIcons = {
+            connected: '🟢',
+            connecting: '🟡', 
+            disconnected: '🔴',
+            error: '⚠️'
+        };
+
+        const statusTexts = {
+            connected: '已連線',
+            connecting: '連線中...',
+            disconnected: '已斷線',
+            error: '連線錯誤'
+        };
+
+        indicator.innerHTML = `
+            <span class="status-icon">${statusIcons[status] || '⚫'}</span>
+            <span class="status-text">${message || statusTexts[status] || status}</span>
+        `;
+
+        // 自動隱藏成功狀態
+        if (status === 'connected') {
+            setTimeout(() => {
+                if (indicator.classList.contains('status-connected')) {
+                    indicator.style.opacity = '0';
+                    setTimeout(() => indicator.remove(), 300);
+                }
+            }, 3000);
+        }
     }
 }
 

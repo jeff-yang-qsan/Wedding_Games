@@ -146,6 +146,21 @@ class GameController {
             this.handlePlayerJoined(event.detail);
         });
 
+        // WebRTC 連接建立事件 (主持人專用)
+        window.addEventListener('playerConnected', (event) => {
+            this.handlePlayerConnected(event.detail);
+        });
+
+        // WebRTC 玩家加入請求事件 (主持人專用)
+        window.addEventListener('playerJoinRequest', (event) => {
+            this.handlePlayerJoinRequest(event.detail);
+        });
+
+        // WebRTC 加入回應事件 (參賽者專用)
+        window.addEventListener('joinResponse', (event) => {
+            this.handleJoinResponse(event.detail);
+        });
+
         window.addEventListener('playerLeft', (event) => {
             this.handlePlayerLeft(event.detail);
         });
@@ -157,6 +172,10 @@ class GameController {
 
         window.addEventListener('numberDrawn', (event) => {
             this.handleNumberDrawn(event.detail);
+        });
+
+        window.addEventListener('drawNumberRequest', (event) => {
+            this.handleDrawNumberRequest(event.detail);
         });
 
         window.addEventListener('targetSet', (event) => {
@@ -176,14 +195,21 @@ class GameController {
      */
     handleRoleSelection(role) {
         console.log(`選擇角色: ${role}`);
+        console.log(`之前的狀態 - isHost: ${this.isHost}, currentRole: ${this.currentRole}`);
         
+        // 清理之前的狀態
         this.currentRole = role;
         this.isHost = (role === 'host');
+        this.currentPlayerId = undefined;
+        this.currentNickname = undefined;
+
+        console.log(`新的狀態 - isHost: ${this.isHost}, currentRole: ${this.currentRole}`);
 
         if (this.isHost) {
-            window.webrtcManager.setupAsHost();
+            window.webRTCManager.setupAsHost();
         } else {
             // 參賽者ID將在加入房間時設定
+            console.log('設定為參賽者模式，等待加入房間');
         }
 
         // 嘗試恢復之前的遊戲狀態
@@ -223,7 +249,7 @@ class GameController {
     /**
      * 建立遊戲房間
      */
-    createGameRoom() {
+    async createGameRoom() {
         if (!this.isHost) {
             console.error('只有主持人可以建立房間');
             return;
@@ -232,8 +258,15 @@ class GameController {
         try {
             console.log('建立遊戲房間...');
             
+            // 確保 WebRTC 管理器已設定為主持人模式
+            const hostPeerId = await window.webRTCManager.setupAsHost();
+            console.log(`主持人 Peer ID: ${hostPeerId}`);
+            
             // 建立新房間
             const gameRoom = window.gameManager.createGameRoom();
+            
+            // 設定房間代碼到 WebRTC 管理器
+            window.webRTCManager.roomCode = gameRoom.roomCode;
             
             // 儲存房間資料
             window.storageManager.saveGameRoom(gameRoom);
@@ -242,6 +275,14 @@ class GameController {
             // 更新 UI
             window.uiController.displayRoomInfo(gameRoom.roomCode, gameRoom);
             window.uiController.displayPlayersList([]);
+            
+            // 顯示連接資訊（如果有真實 WebRTC 連接）
+            const connectionInfo = window.webRTCManager.getRoomConnectionInfo();
+            if (connectionInfo) {
+                console.log('房間連接資訊:', connectionInfo);
+                // 顯示主持人 Peer ID 供參賽者連接
+                window.uiController.displayHostPeerId(hostPeerId);
+            }
             
             // 顯示成功訊息
             window.uiController.showSuccess(`遊戲房間 ${gameRoom.roomCode} 建立成功！`);
@@ -257,7 +298,7 @@ class GameController {
     /**
      * 加入遊戲房間
      */
-    joinGameRoom() {
+    async joinGameRoom() {
         if (this.isHost) {
             console.error('主持人無法加入房間');
             return;
@@ -285,13 +326,39 @@ class GameController {
 
             // 設定參賽者ID
             const playerId = window.generateUUID();
-            window.webrtcManager.setupAsPlayer(playerId);
+            await window.webRTCManager.setupAsPlayer(playerId);
 
             console.log(`嘗試加入房間 ${roomCode}，暱稱: ${nickname}`);
 
-            // 這裡應該要透過某種信令機制連接到主持人
-            // 為了簡化，我們直接模擬本地加入
-            this.simulateJoinRoom(roomCode, nickname, playerId);
+            // 檢查 URL 參數中是否有主持人 Peer ID
+            const urlParams = new URLSearchParams(window.location.search);
+            const hostPeerId = urlParams.get('join');
+            
+            if (hostPeerId && !window.webRTCManager.fallbackMode) {
+                // 嘗試透過 WebRTC 連接到主持人
+                console.log(`嘗試連接到主持人 Peer ID: ${hostPeerId}`);
+                
+                try {
+                    await window.webRTCManager.connectToHost(hostPeerId);
+                    console.log('成功連接到主持人');
+                    
+                    // 發送加入房間請求給主持人
+                    window.webRTCManager.sendMessage({ 
+                        type: 'joinRoom', 
+                        data: { roomCode, nickname, playerId } 
+                    }, hostPeerId); // 指定主持人作為目標
+                    
+                    window.uiController.showInfo('正在等待主持人確認...');
+                    return; // 等待主持人回應
+                    
+                } catch (connectError) {
+                    console.error('WebRTC 連接失敗:', connectError);
+                    throw new Error('無法連接到主持人，請檢查房間代碼和網絡連接');
+                }
+            } else {
+                // 沒有主持人 Peer ID
+                throw new Error('未找到主持人連接資訊，請使用正確的連接連結');
+            }
 
         } catch (error) {
             console.error('加入房間失敗:', error);
@@ -307,39 +374,83 @@ class GameController {
      */
     simulateJoinRoom(roomCode, nickname, playerId) {
         try {
-            // 載入房間資料
-            const gameRoomData = window.storageManager.loadGameRoom();
-            if (!gameRoomData || gameRoomData.roomCode !== roomCode) {
-                throw new Error('房間不存在或代碼錯誤');
+            console.log('嘗試模擬加入房間:', { roomCode, nickname, playerId });
+            
+            // 嘗試載入房間資料，如果失敗則創建臨時房間
+            let gameRoom;
+            let existingPlayers = [];
+            
+            try {
+                const gameRoomData = window.storageManager.loadGameRoom();
+                if (gameRoomData && gameRoomData.roomCode === roomCode) {
+                    gameRoom = window.GameRoom.fromJSON(gameRoomData);
+                    console.log('找到匹配的房間資料');
+                } else {
+                    throw new Error('房間資料不匹配');
+                }
+            } catch (error) {
+                console.warn('無法載入房間資料，創建臨時房間:', error.message);
+                gameRoom = new window.GameRoom(roomCode);
             }
-
-            const gameRoom = window.GameRoom.fromJSON(gameRoomData);
+            
             window.gameManager.gameRoom = gameRoom;
 
-            // 載入現有參賽者
-            const existingPlayers = window.storageManager.loadPlayers();
-            window.gameManager.players = existingPlayers.map(p => window.Player.fromJSON(p));
+            // 嘗試載入現有參賽者，如果失敗則使用空列表
+            try {
+                existingPlayers = window.storageManager.loadPlayers();
+                window.gameManager.players = existingPlayers.map(p => window.Player.fromJSON(p));
+                console.log('載入現有參賽者:', existingPlayers.length);
+            } catch (error) {
+                console.warn('無法載入參賽者資料，使用空列表:', error.message);
+                window.gameManager.players = [];
+            }
 
-            // 嘗試加入參賽者
-            const player = window.gameManager.addPlayer(nickname, playerId);
+            // 創建參賽者對象
+            let player;
+            try {
+                // 嘗試透過 GameManager 加入
+                player = window.gameManager.addPlayer(nickname, playerId);
+                console.log('透過 GameManager 成功加入:', player);
+            } catch (error) {
+                // 如果 GameManager 加入失敗，創建基本的參賽者對象
+                console.warn('GameManager 加入失敗，創建基本參賽者對象:', error.message);
+                player = {
+                    playerId: playerId,
+                    nickname: nickname,
+                    roomCode: roomCode,
+                    currentNumber: null,
+                    totalScore: 0,
+                    drawnNumbers: [],
+                    roundScores: [],
+                    connectionStatus: 'offline'
+                };
+            }
 
-            // 儲存更新後的參賽者列表
-            window.storageManager.savePlayers(window.gameManager.getPlayersList());
+            // 保存參賽者資訊
+            this.currentPlayer = player;
+            this.currentRoom = gameRoom;
+            this.currentPlayerId = playerId;
+            this.currentNickname = nickname;
+            this.role = 'player';
 
-            // 更新 UI
-            const playerData = {
-                player: player.toJSON(),
-                roomCode: roomCode,
-                playerCount: window.gameManager.players.length
-            };
+            // 嘗試儲存資料（可能失敗，但不影響加入流程）
+            try {
+                window.storageManager.savePlayers(window.gameManager.getPlayersList());
+            } catch (error) {
+                console.warn('無法儲存參賽者資料:', error.message);
+            }
 
-            window.uiController.displayPlayerWaiting(playerData);
-            window.uiController.showSuccess('成功加入遊戲！');
+            // 更新 UI - 使用與 handleJoinResponse 相同的流程
+            console.log('模擬加入成功，更新 UI');
+            window.uiController.showSuccess(`歡迎 ${nickname}！已加入房間 ${roomCode}（離線模式）`);
+            window.uiController.showScreen('player-screen');
+            window.uiController.updatePlayerInfo(player);
 
-            console.log(`成功加入房間 ${roomCode}`);
+            console.log('模擬加入房間完成');
 
         } catch (error) {
-            throw error; // 重新拋出錯誤讓上層處理
+            console.error('模擬加入房間失敗:', error);
+            throw error;
         }
     }
 
@@ -395,8 +506,25 @@ class GameController {
             // 更新 UI
             window.uiController.updateLotteryStatus('抽籤進行中', 0);
             
-            // 模擬廣播給參賽者（實際中會透過 WebRTC）
-            this.simulateLotteryBroadcast();
+            // 廣播抽籤開始事件給所有參賽者
+            const lotteryData = {
+                roundNumber: window.gameManager.gameRoom.currentRound,
+                gameState: window.gameManager.gameRoom.gameState,
+                timestamp: Date.now()
+            };
+            
+            // 觸發抽籤開始事件
+            window.dispatchEvent(new CustomEvent('lotteryStarted', {
+                detail: lotteryData
+            }));
+            
+            // 透過 WebRTC 廣播給參賽者（如果有連接的話）
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'lotteryStarted',
+                    data: lotteryData
+                });
+            }
 
             window.uiController.showSuccess(`第 ${window.gameManager.gameRoom.currentRound} 輪抽籤已開始！`);
             console.log('抽籤開始成功');
@@ -419,20 +547,24 @@ class GameController {
         try {
             console.log('參賽者抽取數字...');
             
-            // 模擬參賽者ID（實際中會從參賽者登入狀態獲取）
-            const playerId = this.currentPlayerId || 'simulated-player-' + Math.random();
+            // 參賽者透過 WebRTC 請求主持人幫忙抽取數字
+            const drawRequest = {
+                playerId: this.currentPlayerId,
+                nickname: this.currentNickname,
+                timestamp: Date.now()
+            };
             
-            // 抽取數字
-            const drawnNumber = window.gameManager.drawNumber(playerId);
+            console.log('發送抽取數字請求:', drawRequest);
             
-            // 儲存狀態
-            window.storageManager.savePlayers(window.gameManager.getPlayersList());
-
-            // 更新 UI
-            window.uiController.displayDrawnNumber(drawnNumber);
-
-            window.uiController.showSuccess(`您抽中了數字: ${drawnNumber}`);
-            console.log(`抽中數字: ${drawnNumber}`);
+            // 透過 WebRTC 發送抽取數字請求給主持人
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'drawNumber',
+                    data: drawRequest
+                });
+            } else {
+                throw new Error('WebRTC 連接不可用');
+            }
 
         } catch (error) {
             console.error('抽數字失敗:', error);
@@ -500,6 +632,26 @@ class GameController {
             
             // 儲存狀態
             window.storageManager.saveGameRoom(window.gameManager.gameRoom);
+
+            // 廣播新輪次開始事件給所有參賽者
+            const lotteryData = {
+                roundNumber: window.gameManager.gameRoom.currentRound,
+                gameState: window.gameManager.gameRoom.gameState,
+                timestamp: Date.now()
+            };
+            
+            // 觸發抽籤開始事件
+            window.dispatchEvent(new CustomEvent('lotteryStarted', {
+                detail: lotteryData
+            }));
+            
+            // 透過 WebRTC 廣播給參賽者
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'lotteryStarted',
+                    data: lotteryData
+                });
+            }
 
             // 回到抽籤控制介面
             window.uiController.showLotteryControl();
@@ -664,17 +816,97 @@ class GameController {
      * @param {Object} data - 抽籤數據
      */
     handleLotteryStarted(data) {
-        console.log('抽籤開始事件:', data);
+        console.log('=== handleLotteryStarted 被調用 ===');
+        console.log('事件數據:', data);
+        console.log('當前角色 isHost:', this.isHost);
+        console.log('當前玩家ID:', this.currentPlayerId);
+        console.log('當前暱稱:', this.currentNickname);
+        
+        // 同步遊戲狀態到本地
+        if (window.gameManager && window.gameManager.gameRoom) {
+            console.log('更新本地遊戲狀態:', data.gameState);
+            window.gameManager.gameRoom.gameState = data.gameState;
+            window.gameManager.gameRoom.currentRound = data.roundNumber;
+        }
         
         if (!this.isHost) {
             // 參賽者：顯示抽籤介面
             const playerData = {
-                nickname: 'Current Player', // 實際中從存儲獲取
-                roundNumber: data.roundNumber
+                nickname: this.currentNickname || 'Player',
+                playerId: this.currentPlayerId || 'unknown',
+                roundNumber: data.roundNumber || window.gameManager?.gameRoom?.currentRound || 1
             };
             
+            console.log('準備更新參賽者抽籤介面:', playerData);
             window.uiController.showPlayerLottery(playerData);
             window.uiController.enableLotteryButton();
+            console.log('參賽者抽籤介面更新完成');
+        } else {
+            // 主持人：更新主持人介面狀態
+            console.log('主持人收到抽籤開始事件，輪次:', data.roundNumber);
+        }
+    }
+
+    /**
+     * 處理抽取數字請求 (主持人端)
+     * @param {Object} data - 抽取數字請求數據
+     */
+    handleDrawNumberRequest(data) {
+        console.log('=== handleDrawNumberRequest 被調用 ===');
+        console.log('請求數據:', data);
+        
+        if (!this.isHost) {
+            console.log('只有主持人可以處理抽取數字請求');
+            return;
+        }
+        
+        try {
+            console.log(`處理玩家 ${data.playerId} 的抽取數字請求`);
+            
+            // 在主持人端執行抽取數字
+            const drawnNumber = window.gameManager.drawNumber(data.playerId);
+            
+            // 儲存狀態
+            window.storageManager.savePlayers(window.gameManager.getPlayersList());
+            
+            // 準備回覆數據
+            const responseData = {
+                playerId: data.playerId,
+                nickname: data.nickname,
+                drawnNumber: drawnNumber,
+                roundNumber: window.gameManager.gameRoom.currentRound,
+                timestamp: Date.now()
+            };
+            
+            console.log('抽數字成功，發送回覆:', responseData);
+            
+            // 廣播數字抽中事件給所有參賽者
+            window.dispatchEvent(new CustomEvent('numberDrawn', {
+                detail: responseData
+            }));
+            
+            // 透過 WebRTC 廣播給所有參賽者
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'numberDrawn',
+                    data: responseData
+                });
+            }
+            
+        } catch (error) {
+            console.error('處理抽取數字請求失敗:', error);
+            
+            // 發送錯誤回覆給請求者
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'drawNumberError',
+                    data: {
+                        playerId: data.playerId,
+                        error: error.message,
+                        timestamp: Date.now()
+                    }
+                }, data.playerId);
+            }
         }
     }
 
@@ -686,8 +918,21 @@ class GameController {
         console.log('數字抽中事件:', data);
         
         if (!this.isHost) {
-            // 參賽者：顯示抽中的數字
-            window.uiController.displayDrawnNumber(data.drawnNumber);
+            // 參賽者：只顯示自己抽中的數字
+            if (data.playerId === this.currentPlayerId) {
+                console.log(`我抽中了數字: ${data.drawnNumber}`);
+                window.uiController.displayDrawnNumber(data.drawnNumber);
+                window.uiController.showSuccess(`您抽中了數字: ${data.drawnNumber}`);
+                
+                // 禁用抽籤按鈕，防止重複抽取
+                const drawBtn = document.getElementById('draw-number-btn');
+                if (drawBtn) {
+                    drawBtn.disabled = true;
+                    drawBtn.textContent = '已抽取';
+                }
+            } else {
+                console.log(`其他玩家 ${data.nickname} 抽中了數字: ${data.drawnNumber}`);
+            }
         } else {
             // 主持人：更新投影幕顯示
             const lotteryStats = window.gameManager.getLotteryStats();
@@ -861,6 +1106,144 @@ class GameController {
     }
 
     /**
+     * 處理參賽者連接建立 (主持人專用)
+     * @param {Object} data - 連接數據 {playerId}
+     */
+    handlePlayerConnected(data) {
+        console.log('收到參賽者連接事件:', data);
+        
+        if (!this.isHost) {
+            console.warn('非主持人收到連接事件，忽略');
+            return;
+        }
+
+        const { playerId } = data;
+        console.log(`參賽者 ${playerId} 已建立 WebRTC 連接，等待加入房間請求...`);
+        
+        // 顯示連接狀態
+        window.uiController.showInfo(`參賽者 ${playerId.substring(0, 8)}... 已建立連接`);
+    }
+
+    /**
+     * 處理 WebRTC 參賽者加入請求 (主持人專用)
+     * @param {Object} data - 加入請求數據 {playerId, roomCode, nickname}
+     */
+    handlePlayerJoinRequest(data) {
+        console.log('收到參賽者加入請求:', data);
+        
+        if (!this.isHost) {
+            console.warn('非主持人收到加入請求，忽略');
+            return;
+        }
+
+        const { playerId, roomCode, nickname } = data;
+        
+        // 驗證房間代碼是否正確
+        const currentRoom = window.gameManager.gameRoom;
+        console.log(`房間驗證 - 請求代碼: "${roomCode}" (${typeof roomCode}), 當前房間代碼: "${currentRoom?.roomCode}" (${typeof currentRoom?.roomCode})`);
+        console.log('完整房間對象:', currentRoom);
+        
+        if (!currentRoom) {
+            console.warn('當前沒有遊戲房間');
+            window.webRTCManager.sendMessage({
+                type: 'joinResponse',
+                data: {
+                    success: false,
+                    error: '房間不存在'
+                }
+            }, playerId);
+            return;
+        }
+        
+        // 比較房間代碼 - 使用字符串比較和強制類型轉換
+        const requestedCode = String(roomCode);
+        const actualCode = String(currentRoom.roomCode);
+        
+        if (requestedCode !== actualCode) {
+            console.warn(`房間代碼不匹配 - 請求: "${requestedCode}", 實際: "${actualCode}"`);
+            window.webRTCManager.sendMessage({
+                type: 'joinResponse',
+                data: {
+                    success: false,
+                    error: '房間代碼錯誤'
+                }
+            }, playerId);
+            return;
+        }
+
+        try {
+            // 加入參賽者到遊戲管理器
+            const newPlayer = window.gameManager.addPlayer(nickname || `參賽者${playerId.substring(0, 6)}`, playerId);
+            
+            console.log(`參賽者 ${newPlayer.nickname} (${playerId}) 成功加入房間`);
+            
+            // 發送加入成功回應
+            window.webRTCManager.sendMessage({
+                type: 'joinResponse', 
+                data: {
+                    success: true,
+                    player: newPlayer,
+                    room: currentRoom
+                }
+            }, playerId);
+
+            // 更新主持人界面
+            window.uiController.displayPlayersList(window.gameManager.getPlayersList());
+            window.uiController.showSuccess(`${newPlayer.nickname} 已加入房間`);
+
+        } catch (error) {
+            console.error('處理參賽者加入請求失敗:', error);
+            // 發送加入失敗回應
+            window.webRTCManager.sendMessage({
+                type: 'joinResponse',
+                data: {
+                    success: false,
+                    error: '加入房間失敗: ' + error.message
+                }
+            }, playerId);
+        }
+    }
+
+    /**
+     * 處理加入房間回應 (參賽者專用)
+     * @param {Object} data - 加入回應數據 {success, player, room, error}
+     */
+    handleJoinResponse(data) {
+        console.log('收到加入房間回應:', data);
+        
+        if (this.isHost) {
+            console.warn('主持人收到加入回應，忽略');
+            return;
+        }
+
+        if (data.success) {
+            const { player, room } = data;
+            
+            // 設置當前參賽者信息
+            this.currentPlayer = player;
+            this.currentRoom = room;
+            this.currentPlayerId = player.playerId;
+            this.currentNickname = player.nickname;
+            this.role = 'player';
+            
+            console.log(`成功加入房間 ${room.code}，參賽者信息:`, player);
+            
+            // 顯示成功訊息並切換到參賽者介面
+            window.uiController.showSuccess(`歡迎 ${player.nickname}！已成功加入房間`);
+            window.uiController.showScreen('player-screen');
+            
+            // 更新參賽者介面
+            window.uiController.updatePlayerInfo(player);
+            
+        } else {
+            // 加入失敗
+            const errorMsg = data.error || '加入房間失敗';
+            console.error('加入房間失敗:', errorMsg);
+            window.uiController.showError(errorMsg);
+        }
+    }
+
+    /**
      * 處理參賽者加入
      * @param {Object} data - 參賽者數據
      */
@@ -893,11 +1276,16 @@ const gameController = new GameController();
 // 當所有模組載入完成後初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 確保所有依賴都已載入
-    if (window.uiController && window.webrtcManager && window.gameManager) {
+    if (window.uiController && window.webRTCManager && window.gameManager) {
         gameController.init();
         console.log('遊戲控制器已啟動');
     } else {
         console.error('遊戲依賴未完全載入');
+        console.error('依賴狀態:', {
+            uiController: !!window.uiController,
+            webRTCManager: !!window.webRTCManager,
+            gameManager: !!window.gameManager
+        });
     }
 });
 

@@ -11,6 +11,15 @@ class StorageManager {
         this.isIndexedDBSupported = 'indexedDB' in window;
         this.isLocalStorageSupported = 'localStorage' in window;
         
+        // Phase 7: 性能優化設置
+        this.cacheEnabled = true;
+        this.memoryCache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5分鐘快取
+        this.compressionEnabled = true;
+        this.batchOperations = [];
+        this.batchTimeout = null;
+        this.batchDelay = 100; // 100ms 批次延遲
+        
         this.init();
     }
 
@@ -418,6 +427,256 @@ class StorageManager {
         } catch (error) {
             console.error('清理過期數據失敗:', error);
         }
+    }
+
+    // ==================== Phase 7: 性能優化功能 ====================
+
+    /**
+     * 啟用記憶體快取
+     */
+    enableCache() {
+        this.cacheEnabled = true;
+        console.log('記憶體快取已啟用');
+    }
+
+    /**
+     * 停用記憶體快取
+     */
+    disableCache() {
+        this.cacheEnabled = false;
+        this.memoryCache.clear();
+        console.log('記憶體快取已停用');
+    }
+
+    /**
+     * 從快取獲取資料
+     */
+    getFromCache(key) {
+        if (!this.cacheEnabled) return null;
+        
+        const cached = this.memoryCache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+            return cached.data;
+        }
+        
+        // 清理過期快取
+        if (cached) {
+            this.memoryCache.delete(key);
+        }
+        
+        return null;
+    }
+
+    /**
+     * 設定快取資料
+     */
+    setCache(key, data) {
+        if (!this.cacheEnabled) return;
+        
+        this.memoryCache.set(key, {
+            data: data,
+            timestamp: Date.now()
+        });
+        
+        // 限制快取大小
+        if (this.memoryCache.size > 100) {
+            const firstKey = this.memoryCache.keys().next().value;
+            this.memoryCache.delete(firstKey);
+        }
+    }
+
+    /**
+     * 壓縮資料
+     */
+    compressData(data) {
+        if (!this.compressionEnabled) return data;
+        
+        try {
+            const jsonString = JSON.stringify(data);
+            // 簡單的 LZ 類似壓縮
+            return this.simpleCompress(jsonString);
+        } catch (error) {
+            console.warn('資料壓縮失敗:', error);
+            return data;
+        }
+    }
+
+    /**
+     * 解壓縮資料
+     */
+    decompressData(compressedData) {
+        if (!this.compressionEnabled || typeof compressedData !== 'string') {
+            return compressedData;
+        }
+        
+        try {
+            const decompressed = this.simpleDecompress(compressedData);
+            return JSON.parse(decompressed);
+        } catch (error) {
+            console.warn('資料解壓縮失敗:', error);
+            return compressedData;
+        }
+    }
+
+    /**
+     * 簡單字符串壓縮
+     */
+    simpleCompress(str) {
+        const compressed = [];
+        let i = 0;
+        
+        while (i < str.length) {
+            let match = '';
+            let matchLength = 0;
+            
+            // 尋找重複模式
+            for (let j = i + 1; j < Math.min(i + 255, str.length); j++) {
+                const substr = str.substring(i, j);
+                const nextIndex = str.indexOf(substr, j);
+                
+                if (nextIndex !== -1 && substr.length > matchLength) {
+                    match = substr;
+                    matchLength = substr.length;
+                }
+            }
+            
+            if (matchLength > 3) {
+                compressed.push(`[${matchLength}:${match}]`);
+                i += matchLength;
+            } else {
+                compressed.push(str[i]);
+                i++;
+            }
+        }
+        
+        return compressed.join('');
+    }
+
+    /**
+     * 簡單字符串解壓縮
+     */
+    simpleDecompress(compressed) {
+        return compressed.replace(/\[(\d+):([^\]]+)\]/g, (match, length, pattern) => {
+            return pattern.repeat(Math.ceil(parseInt(length) / pattern.length));
+        });
+    }
+
+    /**
+     * 批次操作
+     */
+    addToBatch(operation) {
+        this.batchOperations.push(operation);
+        
+        // 設定批次處理延遲
+        if (this.batchTimeout) {
+            clearTimeout(this.batchTimeout);
+        }
+        
+        this.batchTimeout = setTimeout(() => {
+            this.executeBatch();
+        }, this.batchDelay);
+    }
+
+    /**
+     * 執行批次操作
+     */
+    async executeBatch() {
+        if (this.batchOperations.length === 0) return;
+        
+        const operations = [...this.batchOperations];
+        this.batchOperations = [];
+        
+        console.log(`執行 ${operations.length} 個批次操作`);
+        
+        for (const operation of operations) {
+            try {
+                await operation();
+            } catch (error) {
+                console.error('批次操作失敗:', error);
+            }
+        }
+        
+        console.log('批次操作完成');
+    }
+
+    /**
+     * 獲取儲存統計
+     */
+    async getStorageStats() {
+        const stats = {
+            localStorage: {
+                supported: this.isLocalStorageSupported,
+                used: 0,
+                available: 0
+            },
+            indexedDB: {
+                supported: this.isIndexedDBSupported,
+                used: 0,
+                available: 0
+            },
+            memoryCache: {
+                entries: this.memoryCache.size,
+                enabled: this.cacheEnabled
+            }
+        };
+
+        // LocalStorage 統計
+        if (this.isLocalStorageSupported) {
+            try {
+                let localStorageSize = 0;
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key)) {
+                        localStorageSize += localStorage[key].length;
+                    }
+                }
+                stats.localStorage.used = localStorageSize;
+                stats.localStorage.available = 10 * 1024 * 1024 - localStorageSize; // 假設 10MB 限制
+            } catch (error) {
+                console.warn('無法計算 LocalStorage 大小:', error);
+            }
+        }
+
+        // IndexedDB 統計
+        if (this.isIndexedDBSupported && navigator.storage && navigator.storage.estimate) {
+            try {
+                const estimate = await navigator.storage.estimate();
+                stats.indexedDB.used = estimate.usage || 0;
+                stats.indexedDB.available = (estimate.quota || 0) - (estimate.usage || 0);
+            } catch (error) {
+                console.warn('無法獲取 IndexedDB 統計:', error);
+            }
+        }
+
+        return stats;
+    }
+
+    /**
+     * 清理快取
+     */
+    clearCache() {
+        this.memoryCache.clear();
+        console.log('記憶體快取已清理');
+    }
+
+    /**
+     * 優化儲存空間
+     */
+    async optimizeStorage() {
+        console.log('開始優化儲存空間...');
+        
+        // 清理過期快取
+        this.clearCache();
+        
+        // 清理過期數據
+        await this.cleanupExpiredData(7); // 清理 7 天前的數據
+        
+        // 執行未完成的批次操作
+        await this.executeBatch();
+        
+        const stats = await this.getStorageStats();
+        console.log('儲存空間優化完成:', stats);
+        
+        return stats;
     }
 }
 

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數字抽籤遊戲 - 系統診斷</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .debug-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .status-success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .status-info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+        #error-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .hidden { display: none; }
+        .screen { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>數字抽籤遊戲 - 調試版本</h1>
+    
+    <div id="debug-info">
+        <h2>調試資訊</h2>
+        <div id="debug-log"></div>
+    </div>
+    
+    <div id="role-selection">
+        <h2>選擇角色</h2>
+        <button id="host-btn" class="btn">主持人</button>
+        <button id="player-btn" class="btn">參賽者</button>
+    </div>
+    
+    <div id="host-screen" class="screen hidden">
+        <h2>主持人控制台</h2>
+        <button id="create-room-btn" class="btn">建立新遊戲</button>
+        <div id="room-info" class="hidden">
+            <p>房間代碼: <span id="room-code">未設定</span></p>
+        </div>
+    </div>
+    
+    <script>
+        // 調試日誌函數
+        function debugLog(message) {
+            const log = document.getElementById('debug-log');
+            log.innerHTML += '<p>' + new Date().toLocaleTimeString() + ': ' + message + '</p>';
+            console.log(message);
+        }
+        
+        debugLog('頁面載入中...');
+        
+        // 簡化版本 - 直接測試按鈕功能
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('DOM 載入完成');
+            
+            // 主持人按鈕
+            const hostBtn = document.getElementById('host-btn');
+            if (hostBtn) {
+                debugLog('找到主持人按鈕');
+                hostBtn.addEventListener('click', function() {
+                    debugLog('主持人按鈕被點擊');
+                    document.getElementById('role-selection').classList.add('hidden');
+                    document.getElementById('host-screen').classList.remove('hidden');
+                });
+            } else {
+                debugLog('錯誤：找不到主持人按鈕');
+            }
+            
+            // 建立房間按鈕
+            const createBtn = document.getElementById('create-room-btn');
+            if (createBtn) {
+                debugLog('找到建立房間按鈕');
+                createBtn.addEventListener('click', function() {
+                    debugLog('建立房間按鈕被點擊');
+                    
+                    // 生成簡單房間代碼
+                    const roomCode = Math.floor(1000 + Math.random() * 9000);
+                    document.getElementById('room-code').textContent = roomCode;
+                    document.getElementById('room-info').classList.remove('hidden');
+                    
+                    debugLog('房間已建立，代碼: ' + roomCode);
+                });
+            } else {
+                debugLog('錯誤：找不到建立房間按鈕');
+            }
+            
+            debugLog('事件監聽器設定完成');
+        });
+        
+        // 測試所有 JavaScript 檔案是否存在
+        const scripts = [
+            'assets/js/storage-manager.js',
+            'assets/js/webrtc-manager.js', 
+            'assets/js/game-engine.js',
+            'assets/js/ui-controller.js',
+            'assets/js/error-handler.js',
+            'assets/js/game-controller.js'
+        ];
+        
+        scripts.forEach(script => {
+            fetch(script)
+                .then(response => {
+                    if (response.ok) {
+                        debugLog('✓ ' + script + ' 檔案存在');
+                    } else {
+                        debugLog('✗ ' + script + ' 檔案不存在或無法讀取');
+                    }
+                })
+                .catch(error => {
+                    debugLog('✗ ' + script + ' 載入失敗: ' + error.message);
+                });
+        });
+    </script>
+</body>
+</html>

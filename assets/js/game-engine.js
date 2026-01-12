@@ -83,7 +83,7 @@ class GameRoom {
         const validTransitions = {
             [GameState.WAITING]: [GameState.LOTTERY_IN_PROGRESS],
             [GameState.LOTTERY_IN_PROGRESS]: [GameState.SCORING],
-            [GameState.SCORING]: [GameState.ROUND_COMPLETE],
+            [GameState.SCORING]: [GameState.ROUND_COMPLETE, GameState.GAME_FINISHED],
             [GameState.ROUND_COMPLETE]: [GameState.LOTTERY_IN_PROGRESS, GameState.GAME_FINISHED],
             [GameState.GAME_FINISHED]: [GameState.WAITING] // 重新開始
         };
@@ -96,6 +96,12 @@ class GameRoom {
      * @param {string} newState - 新狀態
      */
     transitionTo(newState) {
+        // 如果新狀態與當前狀態相同，直接返回，不拋出錯誤
+        if (this.gameState === newState) {
+            console.log(`遊戲狀態已經是 ${newState}，跳過轉換`);
+            return;
+        }
+        
         if (!this.canTransitionTo(newState)) {
             throw new Error(`無法從 ${this.gameState} 轉換到 ${newState}`);
         }
@@ -704,7 +710,18 @@ class GameManager {
             throw new Error('無法開始遊戲：參賽者人數不足或遊戲狀態不正確');
         }
 
-        this.gameRoom.transitionTo(GameState.WAITING);
+        console.log(`當前遊戲狀態: ${this.gameRoom.gameState}`);
+        
+        // 只有在不是 WAITING 狀態時才需要轉換
+        if (this.gameRoom.gameState === GameState.GAME_FINISHED) {
+            console.log('遊戲已結束，重新開始新遊戲');
+            this.gameRoom.transitionTo(GameState.WAITING);
+        } else if (this.gameRoom.gameState === GameState.WAITING) {
+            console.log('遊戲狀態已經是 WAITING，準備開始');
+        } else {
+            console.log(`遊戲狀態為 ${this.gameRoom.gameState}，無法直接開始`);
+        }
+        
         console.log('遊戲已開始，等待主持人啟動抽籤');
     }
 

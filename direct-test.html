@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>直接初始化測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            font-family: monospace;
+        }
+        .success { background: #d4edda; border-left: 4px solid #28a745; }
+        .error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 直接初始化測試</h1>
+    
+    <div class="test-section">
+        <h3>基本檢查</h3>
+        <button onclick="testBasics()">檢查基本環境</button>
+        <div id="basics-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>JavaScript 載入測試</h3>
+        <button onclick="testScriptLoading()">測試腳本載入</button>
+        <div id="script-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>初始化流程測試</h3>
+        <button onclick="testInitialization()">測試完整初始化</button>
+        <div id="init-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>畫面切換測試</h3>
+        <button onclick="testScreenTransition()">測試畫面切換邏輯</button>
+        <div id="screen-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <button onclick="location.href='index.html'" style="background: #28a745;">返回主遊戲</button>
+        <button onclick="location.href='debug-init.html'" style="background: #6c757d;">詳細調試</button>
+    </div>
+
+    <script>
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+        
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+        
+        function testBasics() {
+            clearResults('basics-result');
+            addResult('basics-result', '開始基本檢查...', 'info');
+            
+            // 檢查 DOM 狀態
+            addResult('basics-result', `DOM 狀態: ${document.readyState}`, 'success');
+            
+            // 檢查控制台是否正常
+            try {
+                console.log('測試 console.log');
+                addResult('basics-result', '✅ 控制台正常', 'success');
+            } catch (error) {
+                addResult('basics-result', '❌ 控制台異常: ' + error.message, 'error');
+            }
+            
+            // 檢查基本 JavaScript 功能
+            try {
+                const testObj = { test: true };
+                const testArray = [1, 2, 3];
+                addResult('basics-result', '✅ JavaScript 基本功能正常', 'success');
+            } catch (error) {
+                addResult('basics-result', '❌ JavaScript 功能異常: ' + error.message, 'error');
+            }
+        }
+        
+        async function testScriptLoading() {
+            clearResults('script-result');
+            addResult('script-result', '開始測試腳本載入...', 'info');
+            
+            const scripts = [
+                'assets/js/storage-manager.js',
+                'assets/js/error-handler.js',
+                'assets/js/game-engine.js',
+                'assets/js/webrtc-manager.js',
+                'assets/js/ui-controller.js',
+                'assets/js/game-controller.js'
+            ];
+            
+            // 清理現有腳本
+            const existingScripts = document.querySelectorAll('script[src*="assets/js/"]');
+            existingScripts.forEach(script => script.remove());
+            
+            let loadedCount = 0;
+            for (const scriptSrc of scripts) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = scriptSrc;
+                        script.onload = () => {
+                            addResult('script-result', `✅ ${scriptSrc}`, 'success');
+                            loadedCount++;
+                            resolve();
+                        };
+                        script.onerror = () => {
+                            addResult('script-result', `❌ ${scriptSrc}`, 'error');
+                            reject(new Error('Load failed'));
+                        };
+                        document.head.appendChild(script);
+                    });
+                } catch (error) {
+                    addResult('script-result', `❌ ${scriptSrc} - ${error.message}`, 'error');
+                }
+            }
+            
+            addResult('script-result', `載入完成: ${loadedCount}/${scripts.length}`, loadedCount === scripts.length ? 'success' : 'error');
+            
+            // 檢查類別定義
+            await new Promise(resolve => setTimeout(resolve, 500)); // 等待腳本執行
+            
+            const classes = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+            let definedCount = 0;
+            
+            for (const className of classes) {
+                if (typeof window[className] !== 'undefined') {
+                    addResult('script-result', `✅ ${className} 已定義`, 'success');
+                    definedCount++;
+                } else {
+                    addResult('script-result', `❌ ${className} 未定義`, 'error');
+                }
+            }
+            
+            addResult('script-result', `類別定義: ${definedCount}/${classes.length}`, definedCount === classes.length ? 'success' : 'error');
+        }
+        
+        async function testInitialization() {
+            clearResults('init-result');
+            addResult('init-result', '開始測試初始化流程...', 'info');
+            
+            try {
+                // 檢查是否有必要的類別
+                const requiredClasses = ['StorageManager', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+                const missingClasses = requiredClasses.filter(className => typeof window[className] === 'undefined');
+                
+                if (missingClasses.length > 0) {
+                    addResult('init-result', `❌ 缺少類別: ${missingClasses.join(', ')}`, 'error');
+                    return;
+                }
+                
+                addResult('init-result', '✅ 所有必要類別都已載入', 'success');
+                
+                // 測試實例化
+                addResult('init-result', '開始實例化測試...', 'info');
+                
+                const storageManager = new StorageManager();
+                addResult('init-result', '✅ StorageManager 實例化成功', 'success');
+                
+                const gameManager = new GameManager();
+                addResult('init-result', '✅ GameManager 實例化成功', 'success');
+                
+                const webrtcManager = new WebRTCManager();
+                addResult('init-result', '✅ WebRTCManager 實例化成功', 'success');
+                
+                const uiController = new UIController();
+                addResult('init-result', '✅ UIController 實例化成功', 'success');
+                
+                // 測試 UIController 初始化（不設定錯誤處理器，避免干擾）
+                try {
+                    uiController.init();
+                    addResult('init-result', '✅ UIController 初始化成功', 'success');
+                } catch (error) {
+                    addResult('init-result', `⚠️ UIController 初始化警告: ${error.message}`, 'info');
+                }
+                
+                const gameController = new GameController();
+                addResult('init-result', '✅ GameController 實例化成功', 'success');
+                
+                try {
+                    gameController.init();
+                    addResult('init-result', '✅ GameController 初始化成功', 'success');
+                } catch (error) {
+                    addResult('init-result', `⚠️ GameController 初始化警告: ${error.message}`, 'info');
+                }
+                
+                addResult('init-result', '🎉 初始化流程測試完成！', 'success');
+                
+            } catch (error) {
+                addResult('init-result', `❌ 初始化失敗: ${error.message}`, 'error');
+                console.error('詳細錯誤:', error);
+            }
+        }
+        
+        async function testScreenTransition() {
+            clearResults('screen-result');
+            addResult('screen-result', '開始測試畫面切換邏輯...', 'info');
+            
+            try {
+                // 檢查主遊戲的 DOM 結構
+                const response = await fetch('index.html');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // 檢查關鍵元素
+                const loadingScreen = doc.getElementById('loading-screen');
+                const roleSelection = doc.getElementById('role-selection');
+                
+                if (!loadingScreen) {
+                    addResult('screen-result', '❌ loading-screen 元素不存在', 'error');
+                    return;
+                }
+                addResult('screen-result', '✅ loading-screen 元素存在', 'success');
+                
+                if (!roleSelection) {
+                    addResult('screen-result', '❌ role-selection 元素不存在', 'error');
+                    return;
+                }
+                addResult('screen-result', '✅ role-selection 元素存在', 'success');
+                
+                // 檢查樣式類別
+                const hasHiddenClass = roleSelection.classList.contains('hidden');
+                addResult('screen-result', `角色選擇初始狀態: ${hasHiddenClass ? '隱藏' : '顯示'}`, 'info');
+                
+                // 模擬畫面切換邏輯
+                addResult('screen-result', '模擬畫面切換...', 'info');
+                
+                // 創建模擬元素來測試切換邏輯
+                const testLoadingScreen = document.createElement('div');
+                testLoadingScreen.id = 'test-loading-screen';
+                testLoadingScreen.textContent = '正在初始化...';
+                
+                const testRoleSelection = document.createElement('div');
+                testRoleSelection.id = 'test-role-selection';
+                testRoleSelection.className = 'hidden';
+                testRoleSelection.textContent = '角色選擇';
+                
+                document.body.appendChild(testLoadingScreen);
+                document.body.appendChild(testRoleSelection);
+                
+                // 執行切換邏輯
+                setTimeout(() => {
+                    testLoadingScreen.classList.add('hidden');
+                    testRoleSelection.classList.remove('hidden');
+                    
+                    addResult('screen-result', '✅ 畫面切換邏輯執行成功', 'success');
+                    addResult('screen-result', `載入畫面狀態: ${testLoadingScreen.classList.contains('hidden') ? '隱藏' : '顯示'}`, 'info');
+                    addResult('screen-result', `角色選擇狀態: ${testRoleSelection.classList.contains('hidden') ? '隱藏' : '顯示'}`, 'info');
+                    
+                    // 清理測試元素
+                    testLoadingScreen.remove();
+                    testRoleSelection.remove();
+                }, 100);
+                
+            } catch (error) {
+                addResult('screen-result', `❌ 畫面切換測試失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        // 頁面載入完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('直接初始化測試工具已準備就緒');
+        });
+        
+        // 錯誤監聽
+        window.addEventListener('error', (event) => {
+            console.error(`全域錯誤: ${event.message} (${event.filename}:${event.lineno})`);
+        });
+    </script>
+</body>
+</html>

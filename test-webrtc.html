@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC 測試</title>
+</head>
+<body>
+    <h1>測試 WebRTCManager</h1>
+    <div id="result"></div>
+    
+    <script src="assets/js/webrtc-manager.js"></script>
+    <script>
+        const result = document.getElementById('result');
+        
+        function log(message) {
+            result.innerHTML += message + '<br>';
+            console.log(message);
+        }
+        
+        setTimeout(() => {
+            if (typeof WebRTCManager !== 'undefined') {
+                log('✅ WebRTCManager 已定義');
+                try {
+                    const manager = new WebRTCManager();
+                    log('✅ WebRTCManager 可實例化');
+                    log('🎉 WebRTC 管理器測試通過');
+                } catch (error) {
+                    log('❌ WebRTCManager 實例化失敗: ' + error.message);
+                }
+            } else {
+                log('❌ WebRTCManager 未定義');
+                log('檢查控制台錯誤...');
+            }
+        }, 1000);
+        
+        window.addEventListener('error', (event) => {
+            log('🚨 JavaScript 錯誤: ' + event.message + ' (' + event.filename + ':' + event.lineno + ')');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡化版遊戲</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 9999;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .btn {
+            padding: 15px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #007bff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        .status-success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        .status-info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <!-- 載入畫面 -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <h1>數字抽籤遊戲</h1>
+        <p id="loading-text">正在初始化...</p>
+        <div id="loading-status" class="status status-info" style="margin-top: 30px;">
+            準備開始載入...
+        </div>
+    </div>
+
+    <!-- 角色選擇畫面 -->
+    <div id="role-selection" class="screen hidden">
+        <div class="container">
+            <h1>🎮 數字抽籤遊戲</h1>
+            <p>歡迎！請選擇您的角色開始遊戲</p>
+            <div>
+                <button id="host-btn" class="btn">
+                    🎭 主持人
+                    <br><small>建立遊戲房間</small>
+                </button>
+                <button id="player-btn" class="btn btn-secondary">
+                    🎯 參賽者
+                    <br><small>加入遊戲房間</small>
+                </button>
+            </div>
+            <div class="status status-success">
+                🎉 遊戲載入成功！選擇角色繼續進行遊戲。
+            </div>
+        </div>
+    </div>
+
+    <!-- 測試畫面 -->
+    <div id="test-screen" class="screen hidden">
+        <div class="container">
+            <h1>🔧 測試模式</h1>
+            <p>這是一個簡化的測試版本</p>
+            <button onclick="showRoleSelection()" class="btn">返回角色選擇</button>
+            <button onclick="location.href='index.html'" class="btn btn-secondary">載入完整版本</button>
+        </div>
+    </div>
+
+    <script>
+        // 簡化的載入邏輯
+        let loadStep = 0;
+        const loadSteps = [
+            '檢查瀏覽器相容性...',
+            '載入遊戲資源...',
+            '初始化遊戲引擎...',
+            '設定網路連線...',
+            '準備使用者介面...',
+            '載入完成！'
+        ];
+
+        function updateLoadingStatus(message, type = 'info') {
+            const loadingText = document.getElementById('loading-text');
+            const loadingStatus = document.getElementById('loading-status');
+            
+            if (loadingText) loadingText.textContent = message;
+            
+            if (loadingStatus) {
+                loadingStatus.textContent = message;
+                loadingStatus.className = `status status-${type}`;
+            }
+            
+            console.log(`[載入] ${message}`);
+        }
+
+        function simulateLoading() {
+            updateLoadingStatus(loadSteps[loadStep], 'info');
+            loadStep++;
+            
+            if (loadStep < loadSteps.length) {
+                // 模擬載入延遲
+                setTimeout(simulateLoading, 500 + Math.random() * 500);
+            } else {
+                // 載入完成，切換畫面
+                setTimeout(() => {
+                    updateLoadingStatus('正在切換到主畫面...', 'success');
+                    
+                    setTimeout(() => {
+                        showRoleSelection();
+                    }, 500);
+                }, 800);
+            }
+        }
+
+        function showRoleSelection() {
+            console.log('切換到角色選擇畫面');
+            
+            const loadingScreen = document.getElementById('loading-screen');
+            const roleSelection = document.getElementById('role-selection');
+            
+            if (loadingScreen) {
+                loadingScreen.classList.add('hidden');
+                console.log('✓ 載入畫面已隱藏');
+            } else {
+                console.error('✗ 找不到載入畫面元素');
+            }
+            
+            if (roleSelection) {
+                roleSelection.classList.remove('hidden');
+                roleSelection.classList.add('active');
+                console.log('✓ 角色選擇畫面已顯示');
+            } else {
+                console.error('✗ 找不到角色選擇元素');
+            }
+        }
+
+        function showTestScreen() {
+            console.log('切換到測試畫面');
+            
+            const roleSelection = document.getElementById('role-selection');
+            const testScreen = document.getElementById('test-screen');
+            
+            if (roleSelection) {
+                roleSelection.classList.add('hidden');
+                roleSelection.classList.remove('active');
+            }
+            
+            if (testScreen) {
+                testScreen.classList.remove('hidden');
+                testScreen.classList.add('active');
+            }
+        }
+
+        // 設定按鈕事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('簡化版遊戲載入中...');
+            
+            // 設定按鈕事件
+            const hostBtn = document.getElementById('host-btn');
+            const playerBtn = document.getElementById('player-btn');
+            
+            if (hostBtn) {
+                hostBtn.addEventListener('click', function() {
+                    alert('主持人功能：這是簡化版本，完整功能請使用主遊戲');
+                });
+            }
+            
+            if (playerBtn) {
+                playerBtn.addEventListener('click', function() {
+                    alert('參賽者功能：這是簡化版本，完整功能請使用主遊戲');
+                });
+            }
+            
+            // 開始模擬載入
+            setTimeout(simulateLoading, 1000);
+        });
+
+        // 錯誤監聽
+        window.addEventListener('error', (event) => {
+            console.error(`全域錯誤: ${event.message}`);
+            updateLoadingStatus(`載入錯誤: ${event.message}`, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error(`Promise 拒絕: ${event.reason}`);
+            updateLoadingStatus(`載入錯誤: ${event.reason}`, 'error');
+        });
+
+        // 手動切換功能（用於測試）
+        window.showRoleSelection = showRoleSelection;
+        window.showTestScreen = showTestScreen;
+    </script>
+</body>
+</html>

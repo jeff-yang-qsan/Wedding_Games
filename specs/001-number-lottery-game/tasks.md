@@ -149,16 +149,16 @@ Based on plan.md structure - single HTML file with embedded assets:
 
 **Purpose**: Improvements that affect multiple user stories and final deployment preparation
 
-- [ ] T053 [P] Optimize CSS for mobile performance and cross-browser compatibility in assets/css/game-styles.css
-- [ ] T054 [P] Implement responsive design breakpoints for different screen sizes in assets/css/game-styles.css
-- [ ] T055 [P] Add loading states and progress indicators across all interfaces in assets/js/ui-controller.js
-- [ ] T056 [P] Implement connection quality indicators and WebRTC diagnostics in assets/js/webrtc-manager.js
-- [ ] T057 [P] Add proper error message translations and user feedback in assets/js/ui-controller.js
-- [ ] T058 [P] Optimize IndexedDB performance for game history storage in assets/js/storage-manager.js
-- [ ] T059 Embed all CSS and JS assets inline into index.html for single-file deployment
-- [ ] T060 [P] Create deployment documentation in docs/API.md
-- [ ] T061 [P] Validate HTML5 compliance and accessibility standards for index.html
-- [ ] T062 Run performance audit and ensure <3s load time on 3G networks
+- [x] T053 [P] Optimize CSS for mobile performance and cross-browser compatibility in assets/css/game-styles.css
+- [x] T054 [P] Implement responsive design breakpoints for different screen sizes in assets/css/game-styles.css
+- [x] T055 [P] Add loading states and progress indicators across all interfaces in assets/js/ui-controller.js
+- [x] T056 [P] Implement connection quality indicators and WebRTC diagnostics in assets/js/webrtc-manager.js
+- [x] T057 [P] Add proper error message translations and user feedback in assets/js/ui-controller.js
+- [x] T058 [P] Optimize IndexedDB performance for game history storage in assets/js/storage-manager.js
+- [x] T059 Embed all CSS and JS assets inline into index.html for single-file deployment
+- [x] T060 [P] Create deployment documentation in docs/API.md
+- [x] T061 [P] Validate HTML5 compliance and accessibility standards for index.html
+- [x] T062 Run performance audit and ensure <3s load time on 3G networks
 
 ---
 

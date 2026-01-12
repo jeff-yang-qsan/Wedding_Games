@@ -481,34 +481,249 @@
         </div>
     </div>
 
-    <!-- JavaScript 模組將在後續任務中載入 -->
-    <script src="assets/js/storage-manager.js"></script>
-    <script src="assets/js/webrtc-manager.js"></script>
-    <script src="assets/js/game-engine.js"></script>
-    <script src="assets/js/ui-controller.js"></script>
-    <script src="assets/js/error-handler.js"></script>
-    <script src="assets/js/game-controller.js"></script>
+    <!-- JavaScript 模組 - 同步載入確保順序 -->
+    <script src="assets/js/storage-manager.js?v=20260112"></script>
+    <script src="assets/js/error-handler.js?v=20260112"></script>
+    <script src="assets/js/game-engine.js?v=20260112"></script>
+    <script src="assets/js/webrtc-manager.js?v=20260112"></script>
+    <script src="assets/js/ui-controller.js?v=20260112"></script>
+    <script src="assets/js/game-controller.js?v=20260112"></script>
     
     <script>
-        // 初始化應用程式
+        // 等待 DOM 載入完成後初始化
         document.addEventListener('DOMContentLoaded', function() {
-            // 隱藏載入畫面，顯示角色選擇
-            setTimeout(() => {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('role-selection').classList.remove('hidden');
-            }, 1000);
-            
-            // 角色選擇事件監聽器
-            document.getElementById('host-btn').addEventListener('click', function() {
-                document.getElementById('role-selection').classList.add('hidden');
-                document.getElementById('host-screen').classList.remove('hidden');
-            });
-            
-            document.getElementById('player-btn').addEventListener('click', function() {
-                document.getElementById('role-selection').classList.add('hidden');
-                document.getElementById('player-screen').classList.remove('hidden');
-            });
+            // 額外延遲確保所有腳本載入完成，並避免初始化期間的錯誤干擾
+            setTimeout(initializeApplication, 500);
         });
+        
+        // 安全的初始化標記
+        let initializationInProgress = false;
+        let initializationComplete = false;
+        
+        // 初始化應用程式函數
+        function initializeApplication() {
+            if (initializationInProgress || initializationComplete) return;
+            initializationInProgress = true;
+            
+            console.log('=== 開始初始化遊戲應用程式 ===');
+            
+            try {
+                console.log('檢查所有必需的類別...');
+                
+                // 檢查所有必需的類別是否存在
+                const requiredClasses = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+                const availableClasses = [];
+                const missingClasses = [];
+                
+                requiredClasses.forEach(className => {
+                    if (typeof window[className] !== 'undefined') {
+                        console.log(`✓ ${className} 已載入`);
+                        availableClasses.push(className);
+                    } else {
+                        console.error(`✗ ${className} 未載入`);
+                        missingClasses.push(className);
+                    }
+                });
+                
+                if (missingClasses.length > 0) {
+                    throw new Error(`缺少必需的類別: ${missingClasses.join(', ')}\n已載入的類別: ${availableClasses.join(', ')}\n\n請檢查 JavaScript 檔案是否正確載入`);
+                }
+                
+                console.log('所有類別檢查通過，驗證實例...');
+                
+                // 驗證所有實例已正確創建
+                if (!window.storageManager) {
+                    throw new Error('StorageManager 實例不存在');
+                }
+                console.log('✓ StorageManager 實例已存在');
+                
+                if (!window.gameManager) {
+                    throw new Error('GameManager 實例不存在');
+                }
+                console.log('✓ GameManager 實例已存在');
+                
+                if (!window.webRTCManager) {
+                    throw new Error('WebRTCManager 實例不存在');
+                }
+                console.log('✓ WebRTCManager 實例已存在');
+                
+                if (!window.uiController) {
+                    throw new Error('UIController 實例不存在');
+                }
+                console.log('✓ UIController 實例已存在');
+                
+                if (!window.errorHandler) {
+                    throw new Error('ErrorHandler 實例不存在');
+                }
+                console.log('✓ ErrorHandler 實例已存在');
+                
+                if (!window.gameController) {
+                    throw new Error('GameController 實例不存在');
+                }
+                console.log('✓ GameController 實例已存在');
+                
+                console.log('=== 遊戲應用程式初始化完成 ===');
+                
+                // 標記初始化完成
+                initializationInProgress = false;
+                initializationComplete = true;
+                
+                // 驗證關鍵元素存在
+                const criticalElements = ['create-room-btn', 'host-btn', 'player-btn'];
+                const missingElements = criticalElements.filter(id => !document.getElementById(id));
+                
+                if (missingElements.length > 0) {
+                    console.warn('缺少關鍵 UI 元素:', missingElements);
+                } else {
+                    console.log('所有關鍵 UI 元素都已找到');
+                }
+                
+                // 隱藏載入畫面，顯示角色選擇
+                console.log('準備切換畫面...');
+                
+                // 立即檢查元素存在性
+                const loadingScreen = document.getElementById('loading-screen');
+                const roleSelection = document.getElementById('role-selection');
+                
+                console.log('載入畫面元素:', loadingScreen);
+                console.log('角色選擇元素:', roleSelection);
+                
+                if (!loadingScreen) {
+                    console.error('❌ 找不到載入畫面元素 #loading-screen');
+                    return;
+                }
+                
+                if (!roleSelection) {
+                    console.error('❌ 找不到角色選擇元素 #role-selection');
+                    return;
+                }
+                
+                console.log('元素檢查通過，執行畫面切換...');
+                
+                // 使用更短的延遲並添加多重檢查
+                let switchAttempts = 0;
+                const maxAttempts = 3;
+                
+                function attemptSwitch() {
+                    switchAttempts++;
+                    console.log(`嘗試切換畫面 (第 ${switchAttempts} 次)...`);
+                    
+                    try {
+                        // 隱藏載入畫面
+                        if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+                            loadingScreen.classList.add('hidden');
+                            console.log('✓ 載入畫面已隱藏');
+                        }
+                        
+                        // 顯示角色選擇
+                        if (roleSelection && roleSelection.classList.contains('hidden')) {
+                            roleSelection.classList.remove('hidden');
+                            console.log('✓ 角色選擇畫面已顯示');
+                        }
+                        
+                        // 驗證切換結果
+                        const loadingHidden = loadingScreen.classList.contains('hidden');
+                        const roleVisible = !roleSelection.classList.contains('hidden');
+                        
+                        if (loadingHidden && roleVisible) {
+                            console.log('🎉 畫面切換成功完成！');
+                        } else {
+                            console.warn('⚠️ 畫面切換可能未完全成功');
+                            console.log(`載入畫面隱藏: ${loadingHidden}, 角色選擇顯示: ${roleVisible}`);
+                            
+                            if (switchAttempts < maxAttempts) {
+                                setTimeout(attemptSwitch, 200);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ 畫面切換失敗:', error);
+                        if (switchAttempts < maxAttempts) {
+                            setTimeout(attemptSwitch, 200);
+                        }
+                    }
+                }
+                
+                // 立即執行第一次嘗試，然後設定備用延遲
+                attemptSwitch();
+                
+                // 設定備用切換邏輯
+                setTimeout(() => {
+                    const finalLoadingHidden = loadingScreen.classList.contains('hidden');
+                    const finalRoleVisible = !roleSelection.classList.contains('hidden');
+                    
+                    if (!finalLoadingHidden || !finalRoleVisible) {
+                        console.warn('🚨 使用備用切換邏輯');
+                        loadingScreen.style.display = 'none';
+                        roleSelection.style.display = 'block';
+                        roleSelection.classList.remove('hidden');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                initializationInProgress = false;
+                console.error('=== 應用程式初始化失敗 ===');
+                console.error('錯誤:', error.message);
+                console.error('錯誤堆疊:', error.stack);
+                
+                // 顯示用戶友好的錯誤訊息
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) {
+                    loadingScreen.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <h2 style="color: red;">遊戲載入失敗</h2>
+                            <p>錯誤詳情：${error.message}</p>
+                            <div style="margin: 20px 0;">
+                                <button onclick="location.reload()" style="padding: 10px 20px; font-size: 16px; margin: 5px;">
+                                    重新載入
+                                </button>
+                                <button onclick="location.href='minimal-test.html'" style="padding: 10px 20px; font-size: 16px; margin: 5px; background: #6c757d; color: white; border: none;">
+                                    最小測試
+                                </button>
+                            </div>
+                            <div style="font-size: 12px; color: #666;">
+                                <p>如果問題持續存在，請開啟瀏覽器的開發者工具（F12）查看詳細錯誤訊息。</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // 除錯函數
+        window.debugGame = function() {
+            console.log('=== 遊戲狀態調試 ===');
+            console.log('gameManager:', window.gameManager);
+            console.log('webrtcManager:', window.webrtcManager);
+            console.log('storageManager:', window.storageManager);
+            console.log('uiController:', window.uiController);
+            console.log('errorHandler:', window.errorHandler);
+            console.log('gameController:', window.gameController);
+            
+            if (window.gameController) {
+                console.log('gameController.isHost:', window.gameController.isHost);
+                console.log('gameController.currentRole:', window.gameController.currentRole);
+                console.log('gameController.isInitialized:', window.gameController.isInitialized);
+            }
+            
+            // 檢查按鈕狀態
+            const createBtn = document.getElementById('create-room-btn');
+            console.log('create-room-btn 元素:', createBtn);
+            if (createBtn) {
+                console.log('create-room-btn 事件監聽器數量:', getEventListeners ? getEventListeners(createBtn) : '無法檢查');
+            }
+        };
+        
+        // 測試按鈕功能
+        window.testCreateRoom = function() {
+            console.log('=== 測試建立房間功能 ===');
+            const createBtn = document.getElementById('create-room-btn');
+            if (createBtn) {
+                console.log('找到建立房間按鈕，模擬點擊...');
+                createBtn.click();
+            } else {
+                console.error('找不到建立房間按鈕');
+            }
+        };
     </script>
 </body>
 </html>

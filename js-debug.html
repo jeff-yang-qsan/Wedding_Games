@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 檔案載入詳細檢測</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-item { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript 檔案載入詳細檢測</h1>
+    <div id="test-container"></div>
+    
+    <script>
+        const container = document.getElementById('test-container');
+        
+        function addTestResult(title, status, message, error = null) {
+            const div = document.createElement('div');
+            div.className = `test-item ${status}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <p>${message}</p>
+                ${error ? `<pre>錯誤詳情: ${error}</pre>` : ''}
+            `;
+            container.appendChild(div);
+        }
+        
+        // 檢測腳本載入順序
+        const scriptFiles = [
+            'assets/js/error-handler.js',
+            'assets/js/storage-manager.js',
+            'assets/js/game-engine.js',
+            'assets/js/webrtc-manager.js',
+            'assets/js/ui-controller.js',
+            'assets/js/game-controller.js'
+        ];
+        
+        let loadedCount = 0;
+        
+        function loadNextScript(index) {
+            if (index >= scriptFiles.length) {
+                // 所有腳本載入完成，開始測試
+                runTests();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = scriptFiles[index] + '?v=' + Date.now();
+            script.type = 'module';
+            
+            script.onload = function() {
+                addTestResult(
+                    `腳本載入 ${index + 1}/${scriptFiles.length}`,
+                    'success',
+                    `成功載入: ${scriptFiles[index]}`
+                );
+                loadedCount++;
+                loadNextScript(index + 1);
+            };
+            
+            script.onerror = function(e) {
+                addTestResult(
+                    `腳本載入 ${index + 1}/${scriptFiles.length}`,
+                    'error',
+                    `載入失敗: ${scriptFiles[index]}`,
+                    e.toString()
+                );
+                loadNextScript(index + 1); // 繼續載入下一個
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        function runTests() {
+            // 測試每個類別是否存在
+            const classesToTest = [
+                'ErrorHandler',
+                'StorageManager', 
+                'GameEngine',
+                'WebRTCManager',
+                'UIController',
+                'GameController'
+            ];
+            
+            classesToTest.forEach(className => {
+                try {
+                    if (typeof window[className] !== 'undefined') {
+                        addTestResult(
+                            `${className} 類別檢測`,
+                            'success',
+                            `${className} 已正確定義`
+                        );
+                    } else {
+                        addTestResult(
+                            `${className} 類別檢測`,
+                            'error',
+                            `${className} 未定義`
+                        );
+                    }
+                } catch (e) {
+                    addTestResult(
+                        `${className} 類別檢測`,
+                        'error',
+                        `檢測 ${className} 時發生錯誤`,
+                        e.toString()
+                    );
+                }
+            });
+            
+            // 測試創建實例
+            try {
+                if (typeof WebRTCManager !== 'undefined') {
+                    const webrtc = new WebRTCManager();
+                    addTestResult(
+                        'WebRTCManager 實例創建',
+                        'success',
+                        '成功創建 WebRTCManager 實例'
+                    );
+                } else {
+                    addTestResult(
+                        'WebRTCManager 實例創建',
+                        'error',
+                        'WebRTCManager 未定義，無法創建實例'
+                    );
+                }
+            } catch (e) {
+                addTestResult(
+                    'WebRTCManager 實例創建',
+                    'error',
+                    '創建 WebRTCManager 實例失敗',
+                    e.toString()
+                );
+            }
+            
+            // 檢查全域變數
+            addTestResult(
+                '全域變數檢查',
+                'info',
+                `載入的腳本數量: ${loadedCount}/${scriptFiles.length}<br>
+                 可用的全域變數: ${Object.keys(window).filter(k => ['ErrorHandler', 'StorageManager', 'GameEngine', 'WebRTCManager', 'UIController', 'GameController'].includes(k)).join(', ')}`
+            );
+        }
+        
+        // 開始載入腳本
+        addTestResult('開始載入', 'info', '開始按順序載入所有 JavaScript 檔案...');
+        loadNextScript(0);
+    </script>
+</body>
+</html>

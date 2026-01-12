@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按鈕測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 10px; font-size: 16px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .log { border: 1px solid #ccc; padding: 10px; margin: 10px 0; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>按鈕功能測試</h1>
+    
+    <button id="test-btn" class="btn">測試按鈕</button>
+    <button id="create-room-btn" class="btn">建立新遊戲 (模擬)</button>
+    
+    <div class="log" id="log"></div>
+    
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+        
+        // 測試基本按鈕功能
+        document.getElementById('test-btn').addEventListener('click', function() {
+            log('測試按鈕被點擊 - 基本功能正常');
+        });
+        
+        // 模擬建立房間功能
+        document.getElementById('create-room-btn').addEventListener('click', function() {
+            log('開始建立房間...');
+            
+            try {
+                // 模擬房間代碼生成
+                const roomCode = Math.floor(1000 + Math.random() * 9000);
+                log('房間代碼生成: ' + roomCode);
+                
+                // 模擬狀態檢查
+                log('檢查用戶角色...');
+                const isHost = true; // 模擬主持人
+                
+                if (!isHost) {
+                    log('錯誤: 只有主持人可以建立房間');
+                    return;
+                }
+                
+                log('主持人驗證通過');
+                log('房間建立成功！代碼: ' + roomCode);
+                
+            } catch (error) {
+                log('錯誤: ' + error.message);
+            }
+        });
+        
+        log('頁面載入完成，按鈕測試準備就緒');
+    </script>
+</body>
+</html>

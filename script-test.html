@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 載入測試</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            margin: 20px; 
+            background: #1e1e1e; 
+            color: #fff; 
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .success { color: #4fc3f7; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #4caf50; }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            background: #2196f3; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .log { 
+            background: #262626; 
+            padding: 15px; 
+            margin: 20px 0; 
+            border-radius: 4px; 
+            max-height: 500px; 
+            overflow-y: auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .test-pass { border-left-color: #4caf50; background: #1b5e20; }
+        .test-fail { border-left-color: #f44336; background: #b71c1c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 JavaScript 載入診斷工具</h1>
+        
+        <div>
+            <button onclick="testFileAccess()">測試檔案存取</button>
+            <button onclick="testScriptLoading()">測試腳本載入</button>
+            <button onclick="testClassDefinitions()">測試類別定義</button>
+            <button onclick="clearLog()">清除記錄</button>
+            <button onclick="location.href='index.html'">返回主遊戲</button>
+        </div>
+        
+        <div id="results"></div>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const results = document.getElementById('results');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.innerHTML = `<span class="info">[${timestamp}]</span> <span class="${type}">${message}</span>`;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function addResult(test, passed, details = '') {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            div.innerHTML = `
+                <strong>${passed ? '✅' : '❌'} ${test}</strong>
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            results.appendChild(div);
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+            results.innerHTML = '';
+        }
+        
+        async function testFileAccess() {
+            clearLog();
+            addLog('開始測試檔案存取...', 'info');
+            
+            const files = [
+                'assets/js/storage-manager.js',
+                'assets/js/error-handler.js',
+                'assets/js/game-engine.js',
+                'assets/js/webrtc-manager.js',
+                'assets/js/ui-controller.js',
+                'assets/js/game-controller.js'
+            ];
+            
+            let passed = 0;
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file);
+                    if (response.ok) {
+                        const content = await response.text();
+                        const size = (content.length / 1024).toFixed(2);
+                        addLog(`✅ ${file} (${size} KB)`, 'success');
+                        addResult(file, true, `檔案大小: ${size} KB`);
+                        passed++;
+                    } else {
+                        addLog(`❌ ${file} - HTTP ${response.status}`, 'error');
+                        addResult(file, false, `HTTP ${response.status} ${response.statusText}`);
+                    }
+                } catch (error) {
+                    addLog(`❌ ${file} - ${error.message}`, 'error');
+                    addResult(file, false, error.message);
+                }
+            }
+            
+            addLog(`檔案存取測試完成: ${passed}/${files.length}`, passed === files.length ? 'success' : 'error');
+        }
+        
+        async function testScriptLoading() {
+            clearLog();
+            addLog('開始測試動態腳本載入...', 'info');
+            
+            const scripts = [
+                'assets/js/storage-manager.js',
+                'assets/js/error-handler.js', 
+                'assets/js/game-engine.js',
+                'assets/js/webrtc-manager.js',
+                'assets/js/ui-controller.js',
+                'assets/js/game-controller.js'
+            ];
+            
+            // 清除現有的類別
+            const classNames = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+            classNames.forEach(name => {
+                if (window[name]) delete window[name];
+            });
+            
+            let loadedCount = 0;
+            
+            for (const scriptSrc of scripts) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = scriptSrc;
+                        script.onload = () => {
+                            addLog(`✅ ${scriptSrc} 載入成功`, 'success');
+                            loadedCount++;
+                            resolve();
+                        };
+                        script.onerror = () => {
+                            addLog(`❌ ${scriptSrc} 載入失敗`, 'error');
+                            reject(new Error('Script load failed'));
+                        };
+                        document.head.appendChild(script);
+                    });
+                    addResult(scriptSrc, true);
+                } catch (error) {
+                    addResult(scriptSrc, false, error.message);
+                }
+            }
+            
+            addLog(`腳本載入測試完成: ${loadedCount}/${scripts.length}`, 'info');
+            
+            // 等待一下讓腳本執行
+            setTimeout(() => testClassDefinitions(), 500);
+        }
+        
+        function testClassDefinitions() {
+            addLog('開始測試類別定義...', 'info');
+            
+            const requiredClasses = [
+                'StorageManager',
+                'ErrorHandler', 
+                'GameManager',
+                'WebRTCManager',
+                'UIController',
+                'GameController'
+            ];
+            
+            let definedCount = 0;
+            
+            requiredClasses.forEach(className => {
+                if (typeof window[className] !== 'undefined') {
+                    addLog(`✅ ${className} 已定義`, 'success');
+                    
+                    // 測試實例化
+                    try {
+                        const instance = new window[className]();
+                        addLog(`✅ ${className} 可實例化`, 'success');
+                        addResult(`${className} 類別`, true, '已定義且可實例化');
+                        definedCount++;
+                    } catch (error) {
+                        addLog(`⚠️ ${className} 定義但無法實例化: ${error.message}`, 'warning');
+                        addResult(`${className} 類別`, false, `無法實例化: ${error.message}`);
+                    }
+                } else {
+                    addLog(`❌ ${className} 未定義`, 'error');
+                    addResult(`${className} 類別`, false, '類別未定義');
+                }
+            });
+            
+            addLog(`類別定義測試完成: ${definedCount}/${requiredClasses.length}`, 'info');
+            
+            if (definedCount === requiredClasses.length) {
+                addLog('🎉 所有測試通過！遊戲應該可以正常運行', 'success');
+            } else {
+                addLog('⚠️ 部分測試失敗，遊戲可能無法正常運行', 'warning');
+            }
+        }
+        
+        // 自動執行基本檔案檢查
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('診斷工具已載入', 'info');
+            addLog('建議執行順序：檔案存取 → 腳本載入 → 類別定義', 'info');
+        });
+        
+        // 全域錯誤監聽
+        window.addEventListener('error', (event) => {
+            addLog(`全域錯誤: ${event.message} (${event.filename}:${event.lineno})`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            addLog(`Promise 拒絕: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初始化調試</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            margin: 20px; 
+            background: #0d1117; 
+            color: #e6edf3; 
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .step { 
+            margin: 5px 0; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            border-left: 4px solid;
+        }
+        .step-pending { border-left-color: #f0883e; background: rgba(240, 136, 62, 0.1); }
+        .step-success { border-left-color: #3fb950; background: rgba(63, 185, 80, 0.1); }
+        .step-error { border-left-color: #f85149; background: rgba(248, 81, 73, 0.1); }
+        .step-info { border-left-color: #58a6ff; background: rgba(88, 166, 255, 0.1); }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            background: #21262d; 
+            color: #e6edf3; 
+            border: 1px solid #30363d; 
+            border-radius: 6px; 
+            cursor: pointer; 
+        }
+        button:hover { background: #30363d; }
+        .log { 
+            background: #0d1117; 
+            border: 1px solid #30363d; 
+            padding: 15px; 
+            margin: 20px 0; 
+            border-radius: 6px; 
+            max-height: 400px; 
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .critical-error {
+            background: rgba(248, 81, 73, 0.2);
+            border: 2px solid #f85149;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 初始化調試工具</h1>
+        
+        <div>
+            <button onclick="runDetailedTest()">開始詳細測試</button>
+            <button onclick="testSingleStep()">逐步測試</button>
+            <button onclick="checkDOMElements()">檢查 DOM 元素</button>
+            <button onclick="clearAll()">清除記錄</button>
+            <button onclick="location.href='index.html'">返回主遊戲</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="steps"></div>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        const steps = document.getElementById('steps');
+        let currentStep = 0;
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.innerHTML = `<span style="color: #7d8590">[${timestamp}]</span> ${message}`;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function addStep(message, type = 'pending') {
+            const div = document.createElement('div');
+            div.className = `step step-${type}`;
+            div.innerHTML = `<strong>步驟 ${++currentStep}:</strong> ${message}`;
+            steps.appendChild(div);
+            return div;
+        }
+        
+        function updateStep(stepDiv, message, type = 'success') {
+            stepDiv.className = `step step-${type}`;
+            stepDiv.innerHTML = stepDiv.innerHTML.replace(/步驟 \d+:/, `步驟 ${stepDiv.innerHTML.match(/步驟 (\d+):/)[1]}:`);
+            if (message) {
+                stepDiv.innerHTML += ` - ${message}`;
+            }
+        }
+        
+        function clearAll() {
+            log.innerHTML = '';
+            steps.innerHTML = '';
+            status.innerHTML = '';
+            currentStep = 0;
+        }
+        
+        async function runDetailedTest() {
+            clearAll();
+            addLog('🚀 開始詳細初始化測試', 'info');
+            
+            try {
+                // 步驟 1: 檢查基本環境
+                const step1 = addStep('檢查基本環境');
+                addLog('檢查 DOM 載入狀態...');
+                if (document.readyState === 'complete') {
+                    addLog('✅ DOM 已完全載入');
+                    updateStep(step1, 'DOM 完全載入');
+                } else {
+                    addLog('⚠️ DOM 尚未完全載入: ' + document.readyState);
+                    updateStep(step1, 'DOM 載入狀態: ' + document.readyState, 'error');
+                }
+                
+                // 步驟 2: 檢查 JavaScript 檔案
+                const step2 = addStep('檢查 JavaScript 檔案');
+                const jsFiles = [
+                    'assets/js/storage-manager.js',
+                    'assets/js/error-handler.js',
+                    'assets/js/game-engine.js',
+                    'assets/js/webrtc-manager.js',
+                    'assets/js/ui-controller.js',
+                    'assets/js/game-controller.js'
+                ];
+                
+                let loadedFiles = 0;
+                for (const file of jsFiles) {
+                    try {
+                        const response = await fetch(file);
+                        if (response.ok) {
+                            addLog(`✅ ${file} 可存取`);
+                            loadedFiles++;
+                        } else {
+                            addLog(`❌ ${file} HTTP ${response.status}`);
+                        }
+                    } catch (error) {
+                        addLog(`❌ ${file} 載入錯誤: ${error.message}`);
+                    }
+                }
+                updateStep(step2, `${loadedFiles}/${jsFiles.length} 檔案可存取`);
+                
+                // 步驟 3: 載入並檢查類別
+                const step3 = addStep('載入 JavaScript 類別');
+                addLog('開始載入所有 JavaScript 檔案...');
+                
+                // 模擬 index.html 的載入方式
+                for (const file of jsFiles) {
+                    await loadScript(file);
+                }
+                
+                // 等待腳本執行
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const requiredClasses = ['StorageManager', 'ErrorHandler', 'GameManager', 'WebRTCManager', 'UIController', 'GameController'];
+                let definedClasses = 0;
+                
+                for (const className of requiredClasses) {
+                    if (typeof window[className] !== 'undefined') {
+                        addLog(`✅ ${className} 已定義`);
+                        definedClasses++;
+                    } else {
+                        addLog(`❌ ${className} 未定義`);
+                    }
+                }
+                updateStep(step3, `${definedClasses}/${requiredClasses.length} 類別已定義`);
+                
+                // 步驟 4: 測試類別實例化
+                const step4 = addStep('測試類別實例化');
+                let instanceCount = 0;
+                
+                if (typeof StorageManager !== 'undefined') {
+                    try {
+                        const storage = new StorageManager();
+                        addLog('✅ StorageManager 可實例化');
+                        instanceCount++;
+                    } catch (error) {
+                        addLog(`❌ StorageManager 實例化失敗: ${error.message}`);
+                    }
+                }
+                
+                if (typeof UIController !== 'undefined') {
+                    try {
+                        const ui = new UIController();
+                        addLog('✅ UIController 可實例化');
+                        instanceCount++;
+                    } catch (error) {
+                        addLog(`❌ UIController 實例化失敗: ${error.message}`);
+                    }
+                }
+                
+                updateStep(step4, `${instanceCount} 個類別成功實例化`);
+                
+                // 步驟 5: 檢查 DOM 元素
+                const step5 = addStep('檢查關鍵 DOM 元素');
+                await checkDOMElements(false);
+                updateStep(step5, '詳見上方檢查結果');
+                
+                // 步驟 6: 模擬初始化流程
+                const step6 = addStep('模擬完整初始化流程');
+                await simulateInitialization();
+                updateStep(step6, '初始化模擬完成');
+                
+                addLog('🎉 詳細測試完成！');
+                
+            } catch (error) {
+                addLog(`💥 測試過程中發生錯誤: ${error.message}`, 'error');
+                console.error('詳細錯誤:', error);
+            }
+        }
+        
+        async function simulateInitialization() {
+            addLog('=== 開始模擬初始化流程 ===');
+            
+            try {
+                // 模擬 initializeApplication 函數
+                if (typeof StorageManager !== 'undefined') {
+                    const storageManager = new StorageManager();
+                    addLog('✅ StorageManager 初始化模擬成功');
+                }
+                
+                if (typeof GameManager !== 'undefined') {
+                    const gameManager = new GameManager();
+                    addLog('✅ GameManager 初始化模擬成功');
+                }
+                
+                if (typeof WebRTCManager !== 'undefined') {
+                    const webrtcManager = new WebRTCManager();
+                    addLog('✅ WebRTCManager 初始化模擬成功');
+                }
+                
+                if (typeof UIController !== 'undefined') {
+                    const uiController = new UIController();
+                    // 不調用 init() 避免干擾
+                    addLog('✅ UIController 初始化模擬成功');
+                }
+                
+                if (typeof GameController !== 'undefined') {
+                    const gameController = new GameController();
+                    addLog('✅ GameController 初始化模擬成功');
+                }
+                
+                // 檢查載入畫面和角色選擇元素
+                const loadingScreen = document.getElementById('loading-screen');
+                const roleSelection = document.getElementById('role-selection');
+                
+                addLog(`載入畫面元素: ${loadingScreen ? '存在' : '不存在'}`);
+                addLog(`角色選擇元素: ${roleSelection ? '存在' : '不存在'}`);
+                
+                if (!loadingScreen || !roleSelection) {
+                    addLog('❌ 關鍵 DOM 元素缺失，這可能是問題所在！');
+                }
+                
+            } catch (error) {
+                addLog(`❌ 初始化模擬失敗: ${error.message}`);
+                console.error('初始化錯誤:', error);
+            }
+        }
+        
+        async function checkDOMElements(standalone = true) {
+            if (standalone) {
+                clearAll();
+                addLog('🔍 檢查 DOM 元素...');
+            }
+            
+            // 檢查主遊戲的 DOM 結構
+            try {
+                const response = await fetch('index.html');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const elements = [
+                    'loading-screen',
+                    'role-selection',
+                    'host-screen',
+                    'player-screen',
+                    'host-btn',
+                    'player-btn',
+                    'create-room-btn'
+                ];
+                
+                let foundElements = 0;
+                for (const elementId of elements) {
+                    const element = doc.getElementById(elementId);
+                    if (element) {
+                        addLog(`✅ #${elementId} 存在於 HTML 中`);
+                        foundElements++;
+                    } else {
+                        addLog(`❌ #${elementId} 在 HTML 中不存在`);
+                    }
+                }
+                
+                addLog(`DOM 元素檢查: ${foundElements}/${elements.length} 元素存在`);
+                
+                // 檢查 loading-screen 的內容
+                const loadingScreen = doc.getElementById('loading-screen');
+                if (loadingScreen) {
+                    addLog(`載入畫面內容: ${loadingScreen.innerHTML.substring(0, 100)}...`);
+                }
+                
+            } catch (error) {
+                addLog(`❌ DOM 檢查失敗: ${error.message}`);
+            }
+        }
+        
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                // 移除現有的腳本
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) existing.remove();
+                
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    addLog(`📦 ${src} 載入成功`);
+                    resolve();
+                };
+                script.onerror = () => {
+                    addLog(`💥 ${src} 載入失敗`);
+                    reject(new Error(`Failed to load ${src}`));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        
+        let stepTestIndex = 0;
+        const stepTests = [
+            () => checkDOMElements(false),
+            () => loadScript('assets/js/storage-manager.js'),
+            () => loadScript('assets/js/error-handler.js'),
+            () => loadScript('assets/js/game-engine.js'),
+            () => loadScript('assets/js/webrtc-manager.js'),
+            () => loadScript('assets/js/ui-controller.js'),
+            () => loadScript('assets/js/game-controller.js'),
+            () => simulateInitialization()
+        ];
+        
+        async function testSingleStep() {
+            if (stepTestIndex === 0) {
+                clearAll();
+                addLog('🔧 開始逐步測試...');
+            }
+            
+            if (stepTestIndex < stepTests.length) {
+                const stepFunc = stepTests[stepTestIndex];
+                addLog(`執行步驟 ${stepTestIndex + 1}...`);
+                
+                try {
+                    await stepFunc();
+                    addLog(`✅ 步驟 ${stepTestIndex + 1} 完成`);
+                } catch (error) {
+                    addLog(`❌ 步驟 ${stepTestIndex + 1} 失敗: ${error.message}`);
+                }
+                
+                stepTestIndex++;
+            } else {
+                addLog('🎉 所有步驟測試完成！');
+                stepTestIndex = 0;
+            }
+        }
+        
+        // 頁面載入後的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🎯 調試工具已準備就緒');
+            addLog('建議：先執行「開始詳細測試」來全面診斷問題');
+        });
+        
+        // 全域錯誤監聽
+        window.addEventListener('error', (event) => {
+            addLog(`🚨 全域錯誤: ${event.message} (${event.filename}:${event.lineno})`);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            addLog(`🚨 Promise 拒絕: ${event.reason}`);
+        });
+    </script>
+</body>
+</html>
