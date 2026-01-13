@@ -284,6 +284,11 @@ class GameController {
         try {
             console.log('建立遊戲房間...');
             
+            // 讀取參賽者人數設定
+            const maxPlayersInput = document.getElementById('max-players-input');
+            const maxPlayers = maxPlayersInput ? parseInt(maxPlayersInput.value) || 6 : 6;
+            console.log(`設定最大參賽者人數: ${maxPlayers}`);
+            
             // 清除舊的主持人 Peer ID，確保新房間有新的連接 ID
             localStorage.removeItem('hostPeerId');
             
@@ -291,8 +296,8 @@ class GameController {
             const hostPeerId = await window.webRTCManager.setupAsHost();
             console.log(`主持人 Peer ID: ${hostPeerId}`);
             
-            // 建立新房間
-            const gameRoom = window.gameManager.createGameRoom();
+            // 建立新房間，傳入最大參賽者人數
+            const gameRoom = window.gameManager.createGameRoom(null, maxPlayers);
             
             // 設定房間代碼到 WebRTC 管理器
             window.webRTCManager.roomCode = gameRoom.roomCode;

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>參賽者人數設定測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-case {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .test-case.success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .test-case.error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .controls input, .controls button {
+            margin: 5px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>參賽者人數設定功能測試</h1>
+    
+    <div class="controls">
+        <label>設定參賽者人數: 
+            <input type="number" id="maxPlayers" min="1" max="10" value="6">
+        </label>
+        <button onclick="testCreateRoom()">測試建立房間</button>
+        <button onclick="testValidation()">測試驗證邏輯</button>
+        <button onclick="runAllTests()">執行所有測試</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <script src="assets/js/game-engine.js"></script>
+    <script>
+        function log(message, isSuccess = true) {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-case ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${isSuccess ? '✓' : '✗'}</strong> ${message}`;
+            results.appendChild(div);
+        }
+        
+        function testCreateRoom() {
+            const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+            
+            try {
+                const gameManager = new GameManager();
+                const gameRoom = gameManager.createGameRoom(null, maxPlayers);
+                
+                if (gameRoom.maxPlayers === maxPlayers) {
+                    log(`成功建立房間，設定最大人數: ${gameRoom.maxPlayers}`);
+                } else {
+                    log(`房間建立失敗，預期: ${maxPlayers}, 實際: ${gameRoom.maxPlayers}`, false);
+                }
+                
+                // 測試 JSON 序列化和反序列化
+                const json = gameRoom.toJSON();
+                const restored = GameRoom.fromJSON(json);
+                
+                if (restored.maxPlayers === maxPlayers) {
+                    log(`JSON 序列化/反序列化成功，最大人數: ${restored.maxPlayers}`);
+                } else {
+                    log(`JSON 處理失敗，預期: ${maxPlayers}, 實際: ${restored.maxPlayers}`, false);
+                }
+                
+            } catch (error) {
+                log(`測試失敗: ${error.message}`, false);
+            }
+        }
+        
+        function testValidation() {
+            const testCases = [
+                { input: 0, expected: 6, desc: "輸入 0 應使用預設值 6" },
+                { input: -1, expected: 6, desc: "輸入 -1 應使用預設值 6" },
+                { input: 11, expected: 6, desc: "輸入 11 應使用預設值 6" },
+                { input: 1, expected: 1, desc: "輸入 1 應設定為 1" },
+                { input: 10, expected: 10, desc: "輸入 10 應設定為 10" },
+                { input: 6, expected: 6, desc: "輸入 6 應設定為 6" },
+                { input: "abc", expected: 6, desc: "輸入非數字應使用預設值 6" }
+            ];
+            
+            testCases.forEach(testCase => {
+                try {
+                    const gameRoom = new GameRoom(null, testCase.input);
+                    
+                    if (gameRoom.maxPlayers === testCase.expected) {
+                        log(`驗證成功: ${testCase.desc} (結果: ${gameRoom.maxPlayers})`);
+                    } else {
+                        log(`驗證失敗: ${testCase.desc} (預期: ${testCase.expected}, 實際: ${gameRoom.maxPlayers})`, false);
+                    }
+                } catch (error) {
+                    log(`驗證錯誤: ${testCase.desc} - ${error.message}`, false);
+                }
+            });
+        }
+        
+        function testPlayerLimits() {
+            const gameManager = new GameManager();
+            const gameRoom = gameManager.createGameRoom(null, 3); // 設定最大3人
+            
+            try {
+                // 添加參賽者直到達到限制
+                gameManager.addPlayer("參賽者1", "player1");
+                gameManager.addPlayer("參賽者2", "player2");
+                gameManager.addPlayer("參賽者3", "player3");
+                
+                log(`成功添加 3 位參賽者到 3 人房間`);
+                
+                // 嘗試添加第4位參賽者（應該失敗）
+                try {
+                    gameManager.addPlayer("參賽者4", "player4");
+                    log(`錯誤：不應該能添加第4位參賽者`, false);
+                } catch (error) {
+                    if (error.message.includes("遊戲人數已滿")) {
+                        log(`正確阻止添加超出限制的參賽者: ${error.message}`);
+                    } else {
+                        log(`意外的錯誤: ${error.message}`, false);
+                    }
+                }
+                
+            } catch (error) {
+                log(`參賽者限制測試失敗: ${error.message}`, false);
+            }
+        }
+        
+        function runAllTests() {
+            document.getElementById('test-results').innerHTML = '';
+            
+            log('=== 開始執行所有測試 ===');
+            
+            // 測試各種人數設定
+            [1, 3, 6, 8, 10].forEach(num => {
+                document.getElementById('maxPlayers').value = num;
+                testCreateRoom();
+            });
+            
+            // 測試驗證邏輯
+            testValidation();
+            
+            // 測試參賽者限制
+            testPlayerLimits();
+            
+            log('=== 所有測試完成 ===');
+        }
+        
+        // 頁面載入完成後自動執行基本測試
+        window.addEventListener('load', () => {
+            log('頁面已載入，可以開始測試');
+            log('預設參賽者人數設定: 6 人 (可調整為 1-10 人)');
+        });
+    </script>
+</body>
+</html>

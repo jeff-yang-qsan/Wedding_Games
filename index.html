@@ -56,7 +56,21 @@
                     <!-- 建立遊戲卡片 -->
                     <div id="create-game-card" class="card">
                         <h2>建立新遊戲</h2>
-                        <p>點擊下方按鈕開始新的數字抽籤遊戲</p>
+                        <div class="form-group">
+                            <label for="max-players-input" class="form-label">參賽者人數設定</label>
+                            <div class="input-with-info">
+                                <input 
+                                    type="number" 
+                                    id="max-players-input" 
+                                    class="form-input" 
+                                    min="1" 
+                                    max="10" 
+                                    value="6" 
+                                    placeholder="請輸入參賽者人數"
+                                >
+                                <small class="form-help">可設定 1-10 人，預設 6 人</small>
+                            </div>
+                        </div>
                         <button id="create-room-btn" class="btn btn-primary btn-large">
                             建立新遊戲
                             <small>生成房間代碼供參賽者加入</small>
@@ -79,7 +93,7 @@
                             </div>
                             <div class="status-item">
                                 <span class="status-label">參賽者人數：</span>
-                                <span id="player-count" class="status-value">0/5</span>
+                                <span id="player-count" class="status-value">0/6</span>
                             </div>
                             <div class="status-item">
                                 <span class="status-label">當前輪數：</span>

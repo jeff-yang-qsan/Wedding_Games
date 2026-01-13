@@ -57,14 +57,28 @@ function generateRandomNumber() {
 // ==================== 遊戲房間類別 ====================
 
 class GameRoom {
-    constructor(roomCode = null) {
+    constructor(roomCode = null, maxPlayers = 6) {
         this.roomCode = roomCode || generateRoomCode();
         this.currentRound = 1;
         this.gameState = GameState.WAITING;
         this.hostTargetNumber = null;
-        this.maxPlayers = 5;
+        this.maxPlayers = this.validateMaxPlayers(maxPlayers);
         this.createdAt = new Date();
         this.updatedAt = new Date();
+    }
+
+    /**
+     * 驗證參賽者人數限制
+     * @param {number} maxPlayers - 參賽者人數
+     * @returns {number} 驗證後的人數
+     */
+    validateMaxPlayers(maxPlayers) {
+        const players = parseInt(maxPlayers);
+        if (isNaN(players) || players < 1 || players > 10) {
+            console.warn(`參賽者人數 ${maxPlayers} 無效，使用預設值 6`);
+            return 6;
+        }
+        return players;
     }
 
     /**
@@ -175,11 +189,10 @@ class GameRoom {
      * @param {Object} data - JSON 數據
      */
     static fromJSON(data) {
-        const room = new GameRoom(data.roomCode);
+        const room = new GameRoom(data.roomCode, data.maxPlayers);
         room.currentRound = data.currentRound;
         room.gameState = data.gameState;
         room.hostTargetNumber = data.hostTargetNumber;
-        room.maxPlayers = data.maxPlayers;
         room.createdAt = new Date(data.createdAt);
         room.updatedAt = new Date(data.updatedAt);
         return room;
@@ -585,15 +598,16 @@ class GameManager {
     /**
      * 建立新遊戲房間
      * @param {string} roomCode - 可選的房間代碼
+     * @param {number} maxPlayers - 最大參賽者人數 (1-10)，預設為6
      * @returns {GameRoom} 新建立的遊戲房間
      */
-    createGameRoom(roomCode = null) {
-        this.gameRoom = new GameRoom(roomCode);
+    createGameRoom(roomCode = null, maxPlayers = 6) {
+        this.gameRoom = new GameRoom(roomCode, maxPlayers);
         this.players = [];
         this.rounds = [];
         this.gameResult = null;
         
-        console.log(`遊戲房間 ${this.gameRoom.roomCode} 已建立`);
+        console.log(`遊戲房間 ${this.gameRoom.roomCode} 已建立 (最大 ${this.gameRoom.maxPlayers} 人)`);
         return this.gameRoom;
     }
 
@@ -1001,7 +1015,7 @@ class GameManager {
         return {
             roomCode: this.gameRoom?.roomCode || null,
             playerCount: this.players.length,
-            maxPlayers: this.gameRoom?.maxPlayers || 5,
+            maxPlayers: this.gameRoom?.maxPlayers || 6,
             gameState: this.gameRoom?.gameState || null,
             currentRound: this.gameRoom?.currentRound || 1,
             canAddPlayer: this.canAddPlayer(),

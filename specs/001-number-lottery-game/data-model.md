@@ -103,7 +103,7 @@ type PlayerRanking = {
 ### GameRound 驗證
 - `roundNumber`: 1-5 之間的整數
 - `hostTargetNumber`: 0-100 之間的整數
-- `playerScores`: 每個房間每輪最多5筆記錄
+- `playerScores`: 每個房間每輪最多10筆記錄 (根據設定的參賽者人數)
 - `score`: drawnNumber - hostTargetNumber 的計算結果
 
 ## 狀態轉換規則

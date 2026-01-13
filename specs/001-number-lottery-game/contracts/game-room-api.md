@@ -30,7 +30,7 @@
   timestamp: "2026-01-12T12:00:00.000Z",
   senderId: "host",
   data: {
-    maxPlayers: 5
+    maxPlayers: 6  // 可設定 1-10 人，預設為 6 人
   }
 }
 
@@ -43,6 +43,7 @@
     roomCode: "1234",
     gameState: "waiting",
     currentRound: 1,
+    maxPlayers: 6,
     players: []
   }
 }

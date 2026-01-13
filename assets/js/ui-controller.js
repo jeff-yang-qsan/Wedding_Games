@@ -472,8 +472,12 @@ class UIController {
         // 清空現有內容
         playersListElement.innerHTML = '';
 
+        // 取得最大參賽者人數（從遊戲房間或預設為6）
+        const maxPlayers = window.gameManager?.gameRoom?.maxPlayers || 6;
+        console.log(`顯示參賽者列表，最大人數: ${maxPlayers}`);
+
         // 生成參賽者卡片
-        for (let i = 0; i < 5; i++) { // 固定顯示5個位置
+        for (let i = 0; i < maxPlayers; i++) {
             const player = players[i];
             const playerCard = document.createElement('div');
             
@@ -510,16 +514,20 @@ class UIController {
     /**
      * 更新參賽者計數顯示
      * @param {number} count - 參賽者數量
+     * @param {number} maxCount - 最大參賽者數量，可選
      */
-    updatePlayerCount(count) {
+    updatePlayerCount(count, maxCount = null) {
+        // 如果沒有提供最大數量，嘗試從遊戲房間獲取
+        const max = maxCount || window.gameManager?.gameRoom?.maxPlayers || 6;
+        
         const playerCountElement = document.getElementById('player-count');
         if (playerCountElement) {
-            playerCountElement.textContent = `${count}/5`;
+            playerCountElement.textContent = `${count}/${max}`;
         }
 
         const joinedPlayerCountElement = document.getElementById('joined-player-count');
         if (joinedPlayerCountElement) {
-            joinedPlayerCountElement.textContent = `${count}/5`;
+            joinedPlayerCountElement.textContent = `${count}/${max}`;
         }
     }
 
@@ -1012,8 +1020,9 @@ class UIController {
      * 更新抽籤狀態顯示
      * @param {string} status - 狀態文字
      * @param {number} drawnCount - 已抽籤人數
+     * @param {number} totalCount - 總參賽者人數，可選
      */
-    updateLotteryStatus(status, drawnCount) {
+    updateLotteryStatus(status, drawnCount, totalCount = null) {
         const lotteryStatusElement = document.getElementById('lottery-status');
         if (lotteryStatusElement) {
             lotteryStatusElement.textContent = status;
@@ -1021,7 +1030,9 @@ class UIController {
 
         const drawnCountElement = document.getElementById('drawn-count');
         if (drawnCountElement) {
-            drawnCountElement.textContent = `${drawnCount}/5`;
+            const total = totalCount || window.gameManager?.players?.length || 
+                         window.gameManager?.gameRoom?.maxPlayers || 6;
+            drawnCountElement.textContent = `${drawnCount}/${total}`;
         }
     }
 
@@ -1761,7 +1772,10 @@ class UIController {
         if (gameState) gameState.textContent = '等待參賽者加入';
 
         const playerCount = document.getElementById('player-count');
-        if (playerCount) playerCount.textContent = '0/5';
+        if (playerCount) {
+            const maxPlayers = window.gameManager?.gameRoom?.maxPlayers || 6;
+            playerCount.textContent = `0/${maxPlayers}`;
+        }
 
         const currentRound = document.getElementById('current-round');
         if (currentRound) currentRound.textContent = '1/5';
@@ -1848,7 +1862,8 @@ class UIController {
         // 更新參賽者人數
         const playerCount = document.getElementById('player-count');
         if (playerCount && gameState.players) {
-            playerCount.textContent = `${gameState.players.length}/5`;
+            const maxPlayers = gameState.maxPlayers || window.gameManager?.gameRoom?.maxPlayers || 6;
+            playerCount.textContent = `${gameState.players.length}/${maxPlayers}`;
         }
 
         // 更新當前輪數
