@@ -204,6 +204,7 @@ class StorageManager {
                 localStorage.removeItem('currentGameRoom');
                 localStorage.removeItem('currentPlayers');
                 localStorage.removeItem('currentRound');
+                localStorage.removeItem('hostPeerId'); // 清除主持人 Peer ID
             } else {
                 this._memoryStorage = {};
             }

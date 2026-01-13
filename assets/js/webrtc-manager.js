@@ -91,8 +91,16 @@ class WebRTCManager {
             // 等待 PeerJS 載入完成
             await this.waitForPeerJS();
             
-            // 創建唯一的主持人 ID
-            const hostPeerId = `host_${Date.now()}`;
+            // 檢查是否已有儲存的主持人 ID，確保一致性
+            let hostPeerId = localStorage.getItem('hostPeerId');
+            if (!hostPeerId) {
+                hostPeerId = `host_${Date.now()}`;
+                localStorage.setItem('hostPeerId', hostPeerId);
+                console.log(`產生新的主持人 Peer ID: ${hostPeerId}`);
+            } else {
+                console.log(`重用已儲存的主持人 Peer ID: ${hostPeerId}`);
+            }
+            
             this.peer = new Peer(hostPeerId, this.peerConfig);
             
             return new Promise((resolve, reject) => {

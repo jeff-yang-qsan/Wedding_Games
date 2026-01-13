@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主持人 Peer ID 測試</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <h1>主持人 Peer ID 測試</h1>
+    <button id="create-room">建立房間</button>
+    <button id="restore-state">恢復狀態</button>
+    <button id="clear-storage">清除資料</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+        }
+        
+        // 測試 hostPeerId 儲存和恢復
+        document.getElementById('create-room').addEventListener('click', () => {
+            // 清除舊的 hostPeerId (模擬建立新房間)
+            localStorage.removeItem('hostPeerId');
+            
+            // 檢查是否已有儲存的主持人 ID
+            let hostPeerId = localStorage.getItem('hostPeerId');
+            if (!hostPeerId) {
+                hostPeerId = `host_${Date.now()}`;
+                localStorage.setItem('hostPeerId', hostPeerId);
+                log(`產生新的主持人 Peer ID: ${hostPeerId}`);
+            } else {
+                log(`重用已儲存的主持人 Peer ID: ${hostPeerId}`);
+            }
+            
+            // 模擬儲存參賽者資料
+            const players = [
+                { playerId: 'player1', nickname: '測試參賽者1' },
+                { playerId: 'player2', nickname: '測試參賽者2' }
+            ];
+            localStorage.setItem('currentPlayers', JSON.stringify(players));
+            log(`儲存參賽者列表: ${players.length} 人`);
+        });
+        
+        document.getElementById('restore-state').addEventListener('click', () => {
+            // 檢查儲存的 hostPeerId
+            let hostPeerId = localStorage.getItem('hostPeerId');
+            if (!hostPeerId) {
+                hostPeerId = `host_${Date.now()}`;
+                localStorage.setItem('hostPeerId', hostPeerId);
+                log(`產生新的主持人 Peer ID: ${hostPeerId}`);
+            } else {
+                log(`重用已儲存的主持人 Peer ID: ${hostPeerId}`);
+            }
+            
+            // 載入參賽者資料
+            const playersData = localStorage.getItem('currentPlayers');
+            const players = playersData ? JSON.parse(playersData) : [];
+            log(`載入參賽者列表: ${players.length} 人`);
+            if (players.length > 0) {
+                players.forEach(p => log(`- ${p.nickname} (${p.playerId})`));
+            }
+        });
+        
+        document.getElementById('clear-storage').addEventListener('click', () => {
+            localStorage.removeItem('hostPeerId');
+            localStorage.removeItem('currentPlayers');
+            localStorage.removeItem('currentGameRoom');
+            localStorage.removeItem('currentRound');
+            log('已清除所有儲存資料');
+        });
+        
+        log('測試頁面已載入');
+    </script>
+</body>
+</html>

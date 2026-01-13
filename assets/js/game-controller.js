@@ -193,7 +193,7 @@ class GameController {
      * 處理角色選擇
      * @param {string} role - 選擇的角色
      */
-    handleRoleSelection(role) {
+    async handleRoleSelection(role) {
         console.log(`選擇角色: ${role}`);
         console.log(`之前的狀態 - isHost: ${this.isHost}, currentRole: ${this.currentRole}`);
         
@@ -206,37 +206,63 @@ class GameController {
         console.log(`新的狀態 - isHost: ${this.isHost}, currentRole: ${this.currentRole}`);
 
         if (this.isHost) {
-            window.webRTCManager.setupAsHost();
+            // 主持人：嘗試恢復之前的遊戲狀態
+            await this.restoreGameState();
         } else {
             // 參賽者ID將在加入房間時設定
             console.log('設定為參賽者模式，等待加入房間');
         }
-
-        // 嘗試恢復之前的遊戲狀態
-        this.restoreGameState();
     }
 
     /**
      * 恢復遊戲狀態
      */
-    restoreGameState() {
+    async restoreGameState() {
         try {
             if (this.isHost) {
                 // 恢復主持人的遊戲狀態
                 const gameRoomData = window.storageManager.loadGameRoom();
                 if (gameRoomData) {
                     const gameRoom = window.GameRoom.fromJSON(gameRoomData);
-                    const players = window.storageManager.loadPlayers();
+                    const players = window.storageManager.loadPlayers() || [];
                     
                     console.log('恢復遊戲狀態:', { gameRoom, players });
+                    
+                    // 確保 WebRTC 管理器已設定為主持人模式
+                    const hostPeerId = await window.webRTCManager.setupAsHost();
+                    console.log(`恢復主持人 Peer ID: ${hostPeerId}`);
+                    
+                    // 設定房間代碼到 WebRTC 管理器
+                    window.webRTCManager.roomCode = gameRoom.roomCode;
                     
                     // 更新遊戲管理器
                     window.gameManager.gameRoom = gameRoom;
                     window.gameManager.players = players.map(p => window.Player.fromJSON(p));
                     
-                    // 更新 UI
+                    console.log(`恢復了 ${window.gameManager.players.length} 名參賽者:`, window.gameManager.players.map(p => ({ playerId: p.playerId, nickname: p.nickname })));
+                    
+                    // 更新 UI - 顯示房間資訊和參賽者列表
                     window.uiController.displayRoomInfo(gameRoom.roomCode, gameRoom);
                     window.uiController.displayPlayersList(window.gameManager.players);
+                    
+                    // 重新顯示連接資訊和 QR Code
+                    console.log('重新顯示參賽者連接資訊');
+                    const connectionInfo = window.webRTCManager.getRoomConnectionInfo();
+                    if (connectionInfo) {
+                        console.log('恢復房間連接資訊:', connectionInfo);
+                        window.uiController.displayHostPeerId(hostPeerId);
+                    } else {
+                        // 即使在 fallback 模式也要顯示連接資訊
+                        console.log('顯示 fallback 模式連接資訊');
+                        window.uiController.displayHostPeerId(hostPeerId || `fallback_${gameRoom.roomCode}`);
+                    }
+                    
+                    // 如果有參賽者，顯示恢復成功訊息
+                    if (window.gameManager.players.length > 0) {
+                        window.uiController.showSuccess(`已恢復房間 ${gameRoom.roomCode}，包含 ${window.gameManager.players.length} 名參賽者`);
+                    } else {
+                        window.uiController.showInfo(`已恢復房間 ${gameRoom.roomCode}，等待參賽者加入`);
+                    }
                 }
             }
         } catch (error) {
@@ -257,6 +283,9 @@ class GameController {
 
         try {
             console.log('建立遊戲房間...');
+            
+            // 清除舊的主持人 Peer ID，確保新房間有新的連接 ID
+            localStorage.removeItem('hostPeerId');
             
             // 確保 WebRTC 管理器已設定為主持人模式
             const hostPeerId = await window.webRTCManager.setupAsHost();

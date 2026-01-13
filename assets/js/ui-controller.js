@@ -707,27 +707,116 @@ class UIController {
     }
 
     /**
-     * 生成 QR Code (簡化版)
+     * 生成 QR Code (多重備選方案)
      * @param {string} url - 要編碼的 URL
      */
     generateQRCode(url) {
         const qrContainer = document.getElementById('qr-code-container');
-        if (!qrContainer) return;
-        
-        try {
-            // 使用 Google Chart API 生成 QR Code
-            const qrSize = 150;
-            const qrImageUrl = `https://chart.googleapis.com/chart?chs=${qrSize}x${qrSize}&cht=qr&chl=${encodeURIComponent(url)}`;
-            
-            qrContainer.innerHTML = `
-                <img src="${qrImageUrl}" alt="QR Code" style="max-width: ${qrSize}px;">
-                <br><small>掃描此 QR Code 直接加入遊戲</small>
-            `;
-            
-        } catch (error) {
-            console.warn('無法生成 QR Code:', error);
-            qrContainer.innerHTML = '<small>QR Code 生成失敗</small>';
+        if (!qrContainer) {
+            console.warn('找不到 qr-code-container 元素');
+            return;
         }
+        
+        console.log('正在生成 QR Code，URL:', url);
+        
+        // 顯示載入狀態
+        qrContainer.innerHTML = '<div style="text-align: center; color: #666;">正在載入 QR Code...</div>';
+        
+        const qrSize = 150;
+        const encodedUrl = encodeURIComponent(url);
+        
+        // 備選的 QR Code API 服務
+        const qrServices = [
+            {
+                name: 'QR Server',
+                url: `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodedUrl}`
+            },
+            {
+                name: 'QRCode Monkey',
+                url: `https://api.qrcode-monkey.com/qr/custom?data=${encodedUrl}&config={"body":"square","eye":"frame0","eyeBall":"ball0","erf1":[],"erf2":[],"erf3":[],"brf1":[],"brf2":[],"brf3":[],"bodyColor":"#000000","bgColor":"#FFFFFF","eye1Color":"#000000","eye2Color":"#000000","eye3Color":"#000000","eyeBall1Color":"#000000","eyeBall2Color":"#000000","eyeBall3Color":"#000000","gradientColor1":"","gradientColor2":"","gradientType":"linear","gradientOnEyes":"false","logo":"","logoMode":"default"}&size=${qrSize}&download=false&file=png`
+            },
+            {
+                name: 'GoQR',
+                url: `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodedUrl}&format=png`
+            }
+        ];
+        
+        let currentServiceIndex = 0;
+        
+        const tryNextService = () => {
+            if (currentServiceIndex >= qrServices.length) {
+                // 所有服務都失敗，顯示文字版本
+                this.showTextQRCode(url, qrContainer);
+                return;
+            }
+            
+            const service = qrServices[currentServiceIndex];
+            console.log(`嘗試 QR Code 服務 ${currentServiceIndex + 1}: ${service.name}`);
+            
+            const img = document.createElement('img');
+            img.src = service.url;
+            img.alt = 'QR Code';
+            img.style.maxWidth = `${qrSize}px`;
+            img.style.border = '1px solid #ddd';
+            img.style.borderRadius = '4px';
+            
+            const timeoutId = setTimeout(() => {
+                console.warn(`QR Code 服務 ${service.name} 載入超時`);
+                currentServiceIndex++;
+                tryNextService();
+            }, 5000);
+            
+            img.onload = () => {
+                console.log(`QR Code 載入成功，使用服務: ${service.name}`);
+                clearTimeout(timeoutId);
+                
+                qrContainer.innerHTML = '';
+                qrContainer.appendChild(img);
+                
+                const description = document.createElement('br');
+                qrContainer.appendChild(description);
+                
+                const small = document.createElement('small');
+                small.textContent = '掃描此 QR Code 直接加入遊戲';
+                small.style.color = '#666';
+                qrContainer.appendChild(small);
+            };
+            
+            img.onerror = () => {
+                console.error(`QR Code 服務 ${service.name} 載入失敗`);
+                clearTimeout(timeoutId);
+                currentServiceIndex++;
+                tryNextService();
+            };
+        };
+        
+        // 開始嘗試第一個服務
+        tryNextService();
+    }
+    
+    /**
+     * 顯示文字版 QR Code（當所有圖片服務都失敗時）
+     * @param {string} url - 要顯示的 URL
+     * @param {HTMLElement} container - 容器元素
+     */
+    showTextQRCode(url, container) {
+        console.log('所有 QR Code 服務都失敗，顯示文字版本');
+        
+        container.innerHTML = `
+            <div style="border: 2px solid #007bff; padding: 15px; text-align: center; border-radius: 8px; background: #f8f9fa;">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #007bff;">📱 手機掃描加入</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    請開啟手機相機掃描以下網址的 QR Code<br>
+                    或直接在手機瀏覽器中輸入：
+                </div>
+                <div style="background: white; padding: 8px; border: 1px dashed #ccc; border-radius: 4px; word-break: break-all; font-size: 11px; color: #333;">
+                    ${url}
+                </div>
+                <div style="font-size: 10px; color: #999; margin-top: 8px;">
+                    QR Code 服務暫時無法使用
+                </div>
+            </div>
+        `;
     }
 
     /**
