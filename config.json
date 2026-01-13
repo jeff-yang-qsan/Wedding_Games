@@ -1,0 +1,17 @@
+{
+  "backgroundEffects": {
+    "loveText": {
+      "enabled": true,
+      "text": "Shumin ❤️ Jinfu",
+      "comment": "設定為 false 關閉背景文字，修改 text 可以更改顯示內容"
+    },
+    "petals": {
+      "enabled": true,
+      "comment": "設定為 false 關閉花瓣飄落特效"
+    }
+  },
+  "ui": {
+    "theme": "romantic-pink",
+    "comment": "未來可以擴展其他主題配置"
+  }
+}

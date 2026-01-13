@@ -19,6 +19,10 @@
     <meta name="apple-mobile-web-app-title" content="數字抽籤遊戲">
 </head>
 <body>
+    <!-- 浪漫背景效果 -->
+    <div class="love-text-decoration" id="love-text-decoration"></div>
+    <div class="petals-container" id="petals-container"></div>
+    
     <!-- 主容器 -->
     <div id="app" class="app-container">
         <!-- 載入畫面 -->
@@ -496,6 +500,7 @@
     </div>
 
     <!-- JavaScript 模組 - 同步載入確保順序 -->
+    <script src="assets/js/config-manager.js?v=20260112"></script>
     <script src="assets/js/storage-manager.js?v=20260112"></script>
     <script src="assets/js/error-handler.js?v=20260112"></script>
     <script src="assets/js/game-engine.js?v=20260112"></script>
@@ -738,6 +743,131 @@
                 console.error('找不到建立房間按鈕');
             }
         };
+
+        // ===================== 浪漫背景效果生成器 =====================
+        
+        // 創建愛心文字效果
+        function createLoveText() {
+            // 檢查是否啟用愛心文字
+            if (!window.configManager || !window.configManager.isLoveTextEnabled()) {
+                return;
+            }
+
+            const container = document.getElementById('love-text-decoration');
+            if (!container) return;
+
+            const loveText = document.createElement('div');
+            const styles = ['', 'glow', 'soft']; // 空字串代表預設樣式
+            const style = styles[Math.floor(Math.random() * styles.length)];
+            
+            loveText.className = `love-text ${style}`.trim();
+            
+            // 使用配置中的文字內容
+            const textContent = window.configManager.getLoveTextContent();
+            loveText.textContent = textContent;
+            
+            // 隨機位置
+            loveText.style.left = Math.random() * 100 + '%';
+            loveText.style.animationDelay = Math.random() * 3 + 's';
+            loveText.style.animationDuration = (12 + Math.random() * 8) + 's';
+            
+            // 隨機字體大小
+            const fontSize = 10 + Math.random() * 6;
+            loveText.style.fontSize = fontSize + 'px';
+            
+            container.appendChild(loveText);
+            
+            // 動畫結束後移除元素
+            setTimeout(() => {
+                if (loveText.parentNode) {
+                    loveText.parentNode.removeChild(loveText);
+                }
+            }, 22000);
+        }
+
+        // 創建花瓣效果
+        function createPetal() {
+            // 檢查是否啟用花瓣效果
+            if (!window.configManager || !window.configManager.isPetalsEnabled()) {
+                return;
+            }
+
+            const container = document.getElementById('petals-container');
+            if (!container) return;
+
+            const petal = document.createElement('div');
+            const sizes = ['small', 'medium', 'large'];
+            const colors = ['', 'pink', 'rose']; // 空字串代表預設顏色
+            
+            const size = sizes[Math.floor(Math.random() * sizes.length)];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            petal.className = `petal ${size} ${color}`.trim();
+            
+            // 隨機位置和動畫時間
+            petal.style.left = Math.random() * 100 + '%';
+            petal.style.animationDelay = Math.random() * 2 + 's';
+            petal.style.animationDuration = (8 + Math.random() * 6) + 's';
+            
+            // 隨機初始旋轉
+            const randomRotation = Math.random() * 360;
+            petal.style.transform = `rotate(${randomRotation}deg)`;
+            
+            container.appendChild(petal);
+            
+            // 動畫結束後移除元素
+            setTimeout(() => {
+                if (petal.parentNode) {
+                    petal.parentNode.removeChild(petal);
+                }
+            }, 16000);
+        }
+
+        // 初始化配置和浪漫背景效果
+        async function initRomanticBackgroundWithConfig() {
+            try {
+                // 初始化配置管理器
+                window.configManager = new ConfigManager();
+                await window.configManager.loadConfig();
+                console.log('✅ 配置載入完成');
+                
+                // 啟動浪漫背景效果
+                initRomanticBackground();
+            } catch (error) {
+                console.warn('⚠️ 配置載入失敗，使用預設設定:', error);
+                // 配置載入失敗時，仍然使用預設值啟動背景效果
+                initRomanticBackground();
+            }
+        }
+
+        // 初始化浪漫背景效果
+        function initRomanticBackground() {
+            // 定期生成愛心文字 (每2-6秒)
+            setInterval(() => {
+                if (Math.random() > 0.2) { // 80% 機率生成
+                    createLoveText();
+                }
+            }, 2000 + Math.random() * 4000);
+
+            // 定期生成花瓣 (每0.8-2.5秒)
+            setInterval(() => {
+                if (Math.random() > 0.1) { // 90% 機率生成
+                    createPetal();
+                }
+            }, 800 + Math.random() * 1700);
+
+            // 立即生成一些初始效果
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => createLoveText(), i * 800);
+                setTimeout(() => createPetal(), i * 300);
+            }
+        }
+
+        // 頁面載入完成後啟動效果
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🌸 啟動浪漫背景效果...');
+            initRomanticBackgroundWithConfig();
+        });
     </script>
 </body>
 </html>
