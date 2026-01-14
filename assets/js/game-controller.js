@@ -29,10 +29,10 @@ class GameController {
      * 設定 UI 事件監聽器
      */
     setupEventListeners() {
-        // 角色選擇事件
-        window.addEventListener('roleSelected', (event) => {
-            this.handleRoleSelection(event.detail.role);
-        });
+        // 角色選擇事件 (暫時禁用以避免循環調用)
+        // window.addEventListener('roleSelected', (event) => {
+        //     this.handleRoleSelection(event.detail.role);
+        // });
 
         // 建立房間按鈕
         const createRoomBtn = document.getElementById('create-room-btn');
@@ -224,9 +224,27 @@ class GameController {
             // 主持人：嘗試恢復之前的遊戲狀態
             await this.restoreGameState();
         } else {
-            // 參賽者ID將在加入房間時設定
+            // 參賽者模式下檢查是否有自動加入的邏輯
             console.log('設定為參賽者模式，等待加入房間');
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinParam = urlParams.get('join');
+            
+            if (joinParam) {
+                console.log('🚀 參賽者自動加入模式，Peer ID:', joinParam);
+                // 預填房間代碼（如果有的話）
+                const roomParam = urlParams.get('room') || urlParams.get('roomCode');
+                if (roomParam) {
+                    const roomCodeInput = document.getElementById('room-code-input');
+                    if (roomCodeInput) {
+                        roomCodeInput.value = roomParam;
+                        console.log('已預填房間代碼:', roomParam);
+                    }
+                }
+            }
         }
+        
+        console.log(`角色選擇完成: ${role}`);
     }
 
     /**
@@ -265,11 +283,11 @@ class GameController {
                     const connectionInfo = window.webRTCManager.getRoomConnectionInfo();
                     if (connectionInfo) {
                         console.log('恢復房間連接資訊:', connectionInfo);
-                        window.uiController.displayHostPeerId(hostPeerId);
+                        window.uiController.displayHostPeerId(hostPeerId, gameRoom.roomCode);
                     } else {
                         // 即使在 fallback 模式也要顯示連接資訊
                         console.log('顯示 fallback 模式連接資訊');
-                        window.uiController.displayHostPeerId(hostPeerId || `fallback_${gameRoom.roomCode}`);
+                        window.uiController.displayHostPeerId(hostPeerId || `fallback_${gameRoom.roomCode}`, gameRoom.roomCode);
                     }
                     
                     // 如果有參賽者，顯示恢復成功訊息
@@ -329,8 +347,8 @@ class GameController {
             const connectionInfo = window.webRTCManager.getRoomConnectionInfo();
             if (connectionInfo) {
                 console.log('房間連接資訊:', connectionInfo);
-                // 顯示主持人 Peer ID 供參賽者連接
-                window.uiController.displayHostPeerId(hostPeerId);
+                // 顯示主持人 Peer ID 供參賽者連接，包含房間代碼
+                window.uiController.displayHostPeerId(hostPeerId, gameRoom.roomCode);
             }
             
             // 顯示成功訊息
@@ -820,9 +838,7 @@ class GameController {
         
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
-                if (confirm('確定要重新開始遊戲嗎？這將清除所有數據。')) {
-                    this.restartGame();
-                }
+                this.restartGame();
             });
         }
         
@@ -1068,10 +1084,17 @@ class GameController {
             );
             
             if (myScore) {
+                // 獲取當前玩家的累計得分
+                const currentPlayer = window.gameManager.getPlayer(this.currentPlayerId);
+                const totalWinRounds = currentPlayer ? currentPlayer.totalWinRounds : 0;
+                
                 window.uiController.displayRoundScore({
                     drawnNumber: myScore.drawnNumber,
                     targetNumber: data.targetNumber,
-                    score: myScore.score
+                    score: myScore.score,
+                    totalWinRounds: totalWinRounds,
+                    isWinner: myScore.score > 0,
+                    distance: Math.abs((myScore.drawnNumber || 0) - data.targetNumber)
                 });
             }
         }
@@ -1094,10 +1117,6 @@ class GameController {
      * 重置遊戲
      */
     resetGame() {
-        if (!confirm('確定要重新開始遊戲嗎？所有數據將被清除。')) {
-            return;
-        }
-
         try {
             // 重置遊戲管理器
             window.gameManager.resetGame();

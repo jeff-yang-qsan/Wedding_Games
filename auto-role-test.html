@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自動角色判斷測試</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-link {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .test-link:hover {
+            background-color: #0056b3;
+        }
+        
+        .host-link {
+            background-color: #28a745;
+        }
+        
+        .host-link:hover {
+            background-color: #1e7e34;
+        }
+        
+        .player-link {
+            background-color: #17a2b8;
+        }
+        
+        .player-link:hover {
+            background-color: #117a8b;
+        }
+        
+        .code-example {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 自動角色判斷功能測試</h1>
+    
+    <div class="test-section">
+        <h2>🆕 最新改進：自動房間代碼填入</h2>
+        <p>現在主持人提供的連接連結會包含房間代碼，參賽者點擊後不需要手動輸入房間代碼！</p>
+        <ul>
+            <li><strong>舊版本</strong>：參賽者需要手動輸入房間代碼</li>
+            <li><strong>新版本</strong>：連結自動包含房間代碼，一鍵加入遊戲</li>
+        </ul>
+        
+        <h3>📱 新的參賽者體驗：</h3>
+        <ol>
+            <li>主持人分享帶有 join 和 room 參數的連結</li>
+            <li>參賽者點擊連結自動進入參賽者介面</li>
+            <li>房間代碼自動填入，無需手動輸入</li>
+            <li>直接點擊「加入遊戲」即可！</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 測試連結</h2>
+        
+        <h3>主持人模式測試：</h3>
+        <a href="index.html" class="test-link host-link" target="_blank">
+            📊 主版本 - 主持人模式
+        </a>
+        <a href="index-standalone.html" class="test-link host-link" target="_blank">
+            📊 單文件版本 - 主持人模式
+        </a>
+        
+        <h3>參賽者模式測試：</h3>
+        <a href="index.html?join=host123&room=456789" class="test-link player-link" target="_blank">
+            👤 主版本 - 參賽者模式
+        </a>
+        <a href="index-standalone.html?join=host123&room=456789" class="test-link player-link" target="_blank">
+            👤 單文件版本 - 參賽者模式
+        </a>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 URL 參數說明</h2>
+        
+        <h3>基本參數：</h3>
+        <div class="code-example">
+            <strong>join</strong> - 主持人的 Peer ID，有此參數時自動設為參賽者模式<br>
+            <strong>room</strong> - 房間代碼，用於自動填入房間代碼欄位<br>
+            <strong>roomCode</strong> - 房間代碼的替代參數名
+        </div>
+        
+        <h3>範例 URL：</h3>
+        <div class="code-example">
+            <strong>主持人：</strong> http://localhost:8000/index.html<br>
+            <strong>參賽者（自動填入房間代碼）：</strong> http://localhost:8000/index.html?join=host123&room=456789<br>
+            <small>↑ 新功能：房間代碼會自動填入，參賽者無需手動輸入</small>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ 預期行為</h2>
+        
+        <h3>主持人模式：</h3>
+        <ul>
+            <li>直接顯示主持人控制台</li>
+            <li>跳過角色選擇畫面</li>
+            <li>可以建立新遊戲</li>
+        </ul>
+        
+        <h3>參賽者模式：</h3>
+        <ul>
+            <li>直接顯示參賽者介面</li>
+            <li>跳過角色選擇畫面</li>
+            <li>如果有 room 參數，會自動填入房間代碼</li>
+            <li>可以立即加入遊戲</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 測試步驟</h2>
+        <ol>
+            <li><strong>測試主持人模式：</strong>
+                <ul>
+                    <li>點擊上面的「主持人模式」連結</li>
+                    <li>確認直接顯示主持人控制台，沒有角色選擇畫面</li>
+                </ul>
+            </li>
+            <li><strong>測試參賽者模式：</strong>
+                <ul>
+                    <li>點擊上面的「參賽者模式」連結</li>
+                    <li>確認直接顯示參賽者介面，沒有角色選擇畫面</li>
+                    <li>檢查房間代碼欄位是否已自動填入「456789」</li>
+                </ul>
+            </li>
+            <li><strong>檢查瀏覽器控制台：</strong>
+                <ul>
+                    <li>按 F12 開啟開發者工具</li>
+                    <li>查看 Console 標籤中的日誌訊息</li>
+                    <li>確認顯示正確的角色判斷訊息</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 日誌訊息參考</h2>
+        
+        <h3>主持人模式預期日誌：</h3>
+        <div class="code-example">
+            🎮 未檢測到 join 參數 - 自動設定為主持人<br>
+            🎮 自動設定為主持人模式
+        </div>
+        
+        <h3>參賽者模式預期日誌：</h3>
+        <div class="code-example">
+            🎯 檢測到 join 參數: host123 - 自動設定為參賽者<br>
+            已預填房間代碼: 456789<br>
+            🎯 自動設定為參賽者模式<br>
+            🚀 參賽者自動加入模式，Peer ID: host123
+        </div>
+    </div>
+</body>
+</html>

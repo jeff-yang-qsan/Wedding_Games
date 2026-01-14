@@ -455,6 +455,14 @@
             </div>
         </div>
 
+        <!-- 資訊訊息 -->
+        <div id="info-toast" class="toast toast-info hidden">
+            <div class="toast-content">
+                <span class="toast-message"></span>
+                <button class="toast-close">&times;</button>
+            </div>
+        </div>
+
         <!-- 成功訊息 -->
         <div id="success-toast" class="toast toast-success hidden">
             <div class="toast-content">
@@ -621,66 +629,91 @@
                     return;
                 }
                 
-                console.log('元素檢查通過，執行畫面切換...');
+                console.log('元素檢查通過，執行自動角色判斷...');
                 
-                // 使用更短的延遲並添加多重檢查
-                let switchAttempts = 0;
-                const maxAttempts = 3;
+                // 檢查 URL 參數自動判斷角色
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinParam = urlParams.get('join');
                 
-                function attemptSwitch() {
-                    switchAttempts++;
-                    console.log(`嘗試切換畫面 (第 ${switchAttempts} 次)...`);
+                // 隱藏載入畫面
+                loadingScreen.style.display = 'none';
+                loadingScreen.classList.add('hidden');
+                
+                if (joinParam) {
+                    // 有 join 參數，自動設定為參賽者
+                    console.log('🎯 檢測到 join 參數:', joinParam, '- 自動設定為參賽者');
                     
-                    try {
-                        // 隱藏載入畫面
-                        if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
-                            loadingScreen.classList.add('hidden');
-                            console.log('✓ 載入畫面已隱藏');
-                        }
-                        
-                        // 顯示角色選擇
-                        if (roleSelection && roleSelection.classList.contains('hidden')) {
-                            roleSelection.classList.remove('hidden');
-                            console.log('✓ 角色選擇畫面已顯示');
-                        }
-                        
-                        // 驗證切換結果
-                        const loadingHidden = loadingScreen.classList.contains('hidden');
-                        const roleVisible = !roleSelection.classList.contains('hidden');
-                        
-                        if (loadingHidden && roleVisible) {
-                            console.log('🎉 畫面切換成功完成！');
-                        } else {
-                            console.warn('⚠️ 畫面切換可能未完全成功');
-                            console.log(`載入畫面隱藏: ${loadingHidden}, 角色選擇顯示: ${roleVisible}`);
+                    // 直接調用 UI Controller 顯示參賽者畫面
+                    setTimeout(() => {
+                        if (window.uiController && window.uiController.handleRoleSelection) {
+                            console.log('調用 UI Controller 顯示參賽者畫面');
+                            window.uiController.handleRoleSelection('player');
                             
-                            if (switchAttempts < maxAttempts) {
-                                setTimeout(attemptSwitch, 200);
+                            // 自動填入房間代碼
+                            const roomParam = urlParams.get('room') || urlParams.get('roomCode');
+                            if (roomParam) {
+                                // 多次嘗試填入房間代碼，確保 DOM 元素已建立
+                                let attempts = 0;
+                                const maxAttempts = 5;
+                                const fillRoomCode = () => {
+                                    attempts++;
+                                    const roomCodeInput = document.getElementById('room-code-input');
+                                    if (roomCodeInput) {
+                                        roomCodeInput.value = roomParam;
+                                        console.log(`✅ 已自動填入房間代碼: ${roomParam} (第${attempts}次嘗試)`);
+                                        return;
+                                    } 
+                                    
+                                    if (attempts < maxAttempts) {
+                                        console.log(`⏳ 房間代碼輸入框尚未準備好，重試中... (第${attempts}次嘗試)`);
+                                        setTimeout(fillRoomCode, 200);
+                                    } else {
+                                        console.error('❌ 找不到房間代碼輸入框，已達到最大嘗試次數');
+                                        console.log('可用的輸入框：', document.querySelectorAll('input'));
+                                    }
+                                };
+                                setTimeout(fillRoomCode, 100);
                             }
+                            
+                            // 設定 GameController 的角色狀態
+                            if (window.gameController) {
+                                window.gameController.currentRole = 'player';
+                                window.gameController.isHost = false;
+                                console.log('✅ GameController 角色已設定為參賽者');
+                            }
+                        } else {
+                            console.error('UI Controller 尚未初始化或缺少 handleRoleSelection 方法');
+                            console.log('window.uiController:', window.uiController);
                         }
-                    } catch (error) {
-                        console.error('❌ 畫面切換失敗:', error);
-                        if (switchAttempts < maxAttempts) {
-                            setTimeout(attemptSwitch, 200);
-                        }
-                    }
-                }
-                
-                // 立即執行第一次嘗試，然後設定備用延遲
-                attemptSwitch();
-                
-                // 設定備用切換邏輯
-                setTimeout(() => {
-                    const finalLoadingHidden = loadingScreen.classList.contains('hidden');
-                    const finalRoleVisible = !roleSelection.classList.contains('hidden');
+                    }, 200);
+                } else {
+                    // 沒有 join 參數，自動設定為主持人
+                    console.log('🎮 未檢測到 join 參數 - 自動設定為主持人');
                     
-                    if (!finalLoadingHidden || !finalRoleVisible) {
-                        console.warn('🚨 使用備用切換邏輯');
-                        loadingScreen.style.display = 'none';
-                        roleSelection.style.display = 'block';
-                        roleSelection.classList.remove('hidden');
-                    }
-                }, 1000);
+                    // 備用方法：直接操作 DOM 顯示主持人畫面
+                    setTimeout(() => {
+                        console.log('使用直接 DOM 操作顯示主持人畫面');
+                        const hostScreen = document.getElementById('host-screen');
+                        if (hostScreen) {
+                            // 隱藏所有畫面
+                            document.querySelectorAll('.screen').forEach(screen => {
+                                screen.classList.add('hidden');
+                            });
+                            // 顯示主持人畫面
+                            hostScreen.classList.remove('hidden');
+                            console.log('✅ 主持人畫面已顯示');
+                            
+                            // 手動觸發 GameController 的角色設置
+                            if (window.gameController) {
+                                window.gameController.currentRole = 'host';
+                                window.gameController.isHost = true;
+                                console.log('✅ GameController 角色已設定為主持人');
+                            }
+                        } else {
+                            console.error('❌ 找不到主持人畫面元素');
+                        }
+                    }, 200);
+                }
                 
             } catch (error) {
                 initializationInProgress = false;

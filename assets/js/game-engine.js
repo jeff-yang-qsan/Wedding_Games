@@ -1242,7 +1242,7 @@ class GameManager {
         });
 
         // 清空輪次記錄
-        this.rounds.clear();
+        this.rounds.length = 0;
 
         // 觸發重置事件
         window.dispatchEvent(new CustomEvent('gameReset', {

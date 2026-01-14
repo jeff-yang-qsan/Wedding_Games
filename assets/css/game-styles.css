@@ -299,6 +299,11 @@ small {
     background: #ef4444;
 }
 
+.toast-info {
+    background: #3b82f6;
+    color: white;
+}
+
 .toast-success {
     background: #ffffff;
     color: #059669;
@@ -830,6 +835,12 @@ small {
 .calc-value.winner {
     background: rgba(16, 185, 129, 0.2);
     color: #10b981;
+}
+
+/* 為累計得分文字添加綠色樣式 */
+.cumulative-score {
+    color: #10b981 !important;
+    font-weight: bold;
 }
 
 .calc-item.total .calc-value {

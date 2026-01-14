@@ -302,6 +302,11 @@ small {
     background: #ef4444;
 }
 
+.toast-info {
+    background: #3b82f6;
+    color: white;
+}
+
 .toast-success {
     background: #10b981;
 }
@@ -831,6 +836,12 @@ small {
     background: rgba(16, 185, 129, 0.2);
     color: #10b981;
     font-size: 1.25rem;
+}
+
+/* 為累計得分文字添加綠色樣式 */
+.cumulative-score {
+    color: #10b981 !important;
+    font-weight: bold;
 }
 
 .calc-item.total .calc-value.negative {
@@ -2428,6 +2439,14 @@ small {
             </div>
         </div>
 
+        <!-- 資訊訊息 -->
+        <div id="info-toast" class="toast toast-info hidden">
+            <div class="toast-content">
+                <span class="toast-message"></span>
+                <button class="toast-close">&times;</button>
+            </div>
+        </div>
+
         <!-- 成功訊息 -->
         <div id="success-toast" class="toast toast-success hidden">
             <div class="toast-content">
@@ -2487,11 +2506,47 @@ small {
     <script>
         // 初始化應用程式
         document.addEventListener('DOMContentLoaded', function() {
-            // 隱藏載入畫面，顯示角色選擇
-            setTimeout(() => {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById('role-selection').classList.remove('hidden');
-            }, 1000);
+            // 檢查 URL 參數自動判斷角色
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinParam = urlParams.get('join');
+            
+            document.getElementById('loading-screen').classList.add('hidden');
+            
+            if (joinParam) {
+                // 有 join 參數，自動設定為參賽者
+                console.log('🎯 檢測到 join 參數:', joinParam, '- 自動設定為參賽者');
+                document.getElementById('player-screen').classList.remove('hidden');
+                
+                // 預填房間代碼（如果有的話）
+                const roomParam = urlParams.get('room') || urlParams.get('roomCode');
+                if (roomParam) {
+                    // 多次嘗試填入房間代碼，確保 DOM 元素已建立
+                    let attempts = 0;
+                    const maxAttempts = 5;
+                    const fillRoomCode = () => {
+                        attempts++;
+                        const roomCodeInput = document.getElementById('room-code-input');
+                        if (roomCodeInput) {
+                            roomCodeInput.value = roomParam;
+                            console.log(`✅ 已自動填入房間代碼: ${roomParam} (第${attempts}次嘗試)`);
+                            return;
+                        } 
+                        
+                        if (attempts < maxAttempts) {
+                            console.log(`⏳ 房間代碼輸入框尚未準備好，重試中... (第${attempts}次嘗試)`);
+                            setTimeout(fillRoomCode, 200);
+                        } else {
+                            console.error('❌ 找不到房間代碼輸入框，已達到最大嘗試次數');
+                            console.log('可用的輸入框：', document.querySelectorAll('input'));
+                        }
+                    };
+                    setTimeout(fillRoomCode, 100);
+                }
+            } else {
+                // 沒有 join 參數，自動設定為主持人
+                console.log('🎮 未檢測到 join 參數 - 自動設定為主持人');
+                document.getElementById('host-screen').classList.remove('hidden');
+            }
             
             // 角色選擇事件監聽器
             document.getElementById('host-btn').addEventListener('click', function() {
@@ -5944,7 +5999,7 @@ class GameManager {
         });
 
         // 清空輪次記錄
-        this.rounds.clear();
+        this.rounds.length = 0;
 
         // 觸發重置事件
         window.dispatchEvent(new CustomEvent('gameReset', {
@@ -6525,9 +6580,22 @@ class UIController {
             
             this.showScreen('loading-screen');
         } else {
-            // 載入完成，隱藏載入畫面
+            // 載入完成，根據 URL 參數自動判斷角色
             if (this.currentScreen === 'loading-screen') {
-                this.showScreen('role-selection');
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinParam = urlParams.get('join');
+                
+                if (joinParam) {
+                    // 有 join 參數，自動設定為參賽者
+                    console.log('🎯 自動設定為參賽者模式');
+                    this.handleRoleSelection('player');
+                    this.showScreen('player-screen');
+                } else {
+                    // 沒有 join 參數，自動設定為主持人
+                    console.log('🎮 自動設定為主持人模式');
+                    this.handleRoleSelection('host');
+                    this.showScreen('host-screen');
+                }
             }
         }
     }
@@ -6947,36 +7015,28 @@ class UIController {
      * @param {Object} resultData - 結果數據
      */
     displayRoundScore(resultData) {
-        const { drawnNumber, inputNumber, targetNumber, isWinner, distance } = resultData;
+        const { drawnNumber, inputNumber, targetNumber, isWinner, distance, totalWinRounds } = resultData;
         
-        const roundScoreSection = document.getElementById('round-score-section');
-        const myDrawnNumberElement = document.getElementById('my-drawn-number');
-        const roundTargetNumberElement = document.getElementById('round-target-number');
-        const roundScoreElement = document.getElementById('round-score');
         const scoreStatusMessage = document.getElementById('score-status-message');
-
-        if (roundScoreSection) roundScoreSection.classList.remove('hidden');
-        if (myDrawnNumberElement) myDrawnNumberElement.textContent = inputNumber || drawnNumber;
-        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber.toFixed(1);
+        const scoreCalculation = document.querySelector('.score-calculation');
         
-        if (roundScoreElement) {
-            if (isWinner) {
-                roundScoreElement.textContent = '✓ +1分';
-                roundScoreElement.className = 'calc-value winner';
-            } else {
-                roundScoreElement.textContent = '✗ +0分';
-                roundScoreElement.className = 'calc-value';
-            }
+        // 隱藏詳細的計分區塊
+        if (scoreCalculation) {
+            scoreCalculation.style.display = 'none';
         }
 
         if (scoreStatusMessage) {
             if (isWinner) {
-                scoreStatusMessage.textContent = `🎉 恭喜！您最接近目標數字，獲得1分！`;
+                scoreStatusMessage.innerHTML = `🎉 恭喜！您最接近目標數字，獲得1分！<span class="cumulative-score">目前累計得分：${totalWinRounds}分</span>`;
                 scoreStatusMessage.style.color = '#10b981';
             } else {
-                scoreStatusMessage.textContent = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。`;
+                scoreStatusMessage.innerHTML = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。<span class="cumulative-score">目前累計得分：${totalWinRounds}分</span>`;
                 scoreStatusMessage.style.color = '#6b7280';
             }
+            
+            // 顯示結果訊息
+            const roundScoreSection = document.getElementById('round-score-section');
+            if (roundScoreSection) roundScoreSection.classList.remove('hidden');
         }
     }
 
@@ -7019,7 +7079,7 @@ class UIController {
                     <div class="result-player-name">${this.escapeHtml(result.nickname)}</div>
                     <div class="result-number">${result.inputNumber || result.drawnNumber}</div>
                     <div class="result-score ${result.isWinner ? 'winner' : ''}">${result.isWinner ? '✓ 勝利' : `距離: ${result.distance.toFixed(1)}`}</div>
-                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'}</div>
+                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'} <span class="cumulative-score">(累計: ${result.totalWinRounds}分)</span></div>
                 `;
                 roundResultsList.appendChild(resultCard);
             });
@@ -7582,11 +7642,6 @@ class UIController {
                 window.gameManager.resetGame();
             }
 
-            // 通過 WebRTC 通知重置
-            if (window.webrtcManager) {
-                window.webrtcManager.resetGame('manual');
-            }
-
             // 重置 UI 到初始狀態
             this.resetUIToInitialState();
 
@@ -7605,7 +7660,8 @@ class UIController {
         // 隱藏所有遊戲卡片
         const gameCards = [
             'room-info-card', 'players-list-card', 'lottery-control-card',
-            'round-results-card', 'final-results-card'
+            'round-results-card', 'final-results-card', 'join-game-card',
+            'waiting-card', 'lottery-card'
         ];
         
         gameCards.forEach(cardId => {
@@ -7621,6 +7677,12 @@ class UIController {
         const playersList = document.getElementById('players-list');
         if (playersList) playersList.innerHTML = '';
 
+        const playersConnectionList = document.getElementById('players-connection-list');
+        if (playersConnectionList) playersConnectionList.innerHTML = '';
+
+        const otherPlayersList = document.getElementById('other-players-list');
+        if (otherPlayersList) otherPlayersList.innerHTML = '';
+
         const roundResultsList = document.getElementById('round-results-list');
         if (roundResultsList) roundResultsList.innerHTML = '';
 
@@ -7633,6 +7695,49 @@ class UIController {
 
         const currentRound = document.getElementById('current-round');
         if (currentRound) currentRound.textContent = '1/5';
+
+        // 重置連接狀態指示器
+        const connectionDetails = document.getElementById('connection-details');
+        if (connectionDetails) connectionDetails.textContent = '';
+        
+        const connectionIndicator = document.getElementById('connection-indicator');
+        if (connectionIndicator) {
+            connectionIndicator.classList.add('hidden');
+            connectionIndicator.classList.remove('show'); // 移除show class
+            connectionIndicator.style.display = 'none'; // 強制隱藏
+        }
+        
+        // 重置連接點狀態
+        const connectionDot = document.getElementById('connection-dot');
+        if (connectionDot) {
+            connectionDot.className = 'connection-dot offline';
+        }
+        
+        const connectionText = document.getElementById('connection-text');
+        if (connectionText) connectionText.textContent = '尚未連線';
+        
+        // 重置狀態值
+        const connectionStatus = document.getElementById('connection-status');
+        if (connectionStatus) connectionStatus.textContent = '尚未連線';
+        
+        const playerConnectionStatus = document.getElementById('player-connection-status');
+        if (playerConnectionStatus) playerConnectionStatus.innerHTML = '<span class="connection-indicator offline"></span>尚未連線';
+        
+        // 清空參賽者相關欄位
+        const myNickname = document.getElementById('my-nickname');
+        if (myNickname) myNickname.textContent = '';
+        
+        const joinedRoomCode = document.getElementById('joined-room-code');
+        if (joinedRoomCode) joinedRoomCode.textContent = '';
+        
+        const joinedPlayerCount = document.getElementById('joined-player-count');
+        if (joinedPlayerCount) joinedPlayerCount.textContent = '0/6';
+        
+        // 移除動態創建的連接資訊區塊
+        const connectionInfo = document.getElementById('connection-info');
+        if (connectionInfo) {
+            connectionInfo.remove();
+        }
     }
 
     /**
@@ -7766,7 +7871,7 @@ class UIController {
      */
     handleGameResetEvent(detail) {
         this.resetUIToInitialState();
-        this.showToast('info', '遊戲已重置');
+        this.showToast('success', '遊戲狀態已重置');
     }
 
     /**
@@ -8148,7 +8253,24 @@ class GameController {
         if (this.isHost) {
             window.webrtcManager.setupAsHost();
         } else {
-            // 參賽者ID將在加入房間時設定
+            // 參賽者模式下檢查是否有自動加入的邏輯
+            console.log('設定為參賽者模式，等待加入房間');
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinParam = urlParams.get('join');
+            
+            if (joinParam) {
+                console.log('🚀 參賽者自動加入模式，Peer ID:', joinParam);
+                // 預填房間代碼（如果有的話）
+                const roomParam = urlParams.get('room') || urlParams.get('roomCode');
+                if (roomParam) {
+                    const roomCodeInput = document.getElementById('room-code-input');
+                    if (roomCodeInput) {
+                        roomCodeInput.value = roomParam;
+                        console.log('已預填房間代碼:', roomParam);
+                    }
+                }
+            }
         }
 
         // 嘗試恢復之前的遊戲狀態
@@ -8540,9 +8662,7 @@ class GameController {
         
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
-                if (confirm('確定要重新開始遊戲嗎？這將清除所有數據。')) {
-                    this.restartGame();
-                }
+                this.restartGame();
             });
         }
         
@@ -8682,11 +8802,16 @@ class GameController {
             );
             
             if (myResult) {
+                // 獲取當前玩家的累計得分
+                const currentPlayer = window.gameManager.getPlayer(this.currentPlayerId);
+                const totalWinRounds = currentPlayer ? currentPlayer.totalWinRounds : 0;
+                
                 window.uiController.displayRoundScore({
                     inputNumber: myResult.drawnNumber || myResult.inputNumber,
                     targetNumber: data.targetNumber,
                     isWinner: myResult.isWinner || false,
-                    distance: Math.abs((myResult.drawnNumber || myResult.inputNumber) - data.targetNumber)
+                    distance: Math.abs((myResult.drawnNumber || myResult.inputNumber) - data.targetNumber),
+                    totalWinRounds: totalWinRounds
                 });
             }
         }
@@ -8709,10 +8834,6 @@ class GameController {
      * 重置遊戲
      */
     resetGame() {
-        if (!confirm('確定要重新開始遊戲嗎？所有數據將被清除。')) {
-            return;
-        }
-
         try {
             // 重置遊戲管理器
             window.gameManager.resetGame();

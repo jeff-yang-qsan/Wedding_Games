@@ -396,9 +396,26 @@ class UIController {
             
             this.showScreen('loading-screen');
         } else {
-            // 載入完成，隱藏載入畫面
+            // 載入完成，根據 URL 參數自動判斷角色
             if (this.currentScreen === 'loading-screen') {
-                this.showScreen('role-selection');
+                const urlParams = new URLSearchParams(window.location.search);
+                const joinParam = urlParams.get('join');
+                
+                if (joinParam) {
+                    // 有 join 參數，自動設定為參賽者
+                    console.log('🎯 自動設定為參賽者模式');
+                    const roleEvent = new CustomEvent('roleSelected', {
+                        detail: { role: 'player' }
+                    });
+                    window.dispatchEvent(roleEvent);
+                } else {
+                    // 沒有 join 參數，自動設定為主持人
+                    console.log('🎮 自動設定為主持人模式');
+                    const roleEvent = new CustomEvent('roleSelected', {
+                        detail: { role: 'host' }
+                    });
+                    window.dispatchEvent(roleEvent);
+                }
             }
         }
     }
@@ -629,9 +646,10 @@ class UIController {
     /**
      * 顯示主持人 Peer ID 供參賽者連接
      * @param {string} hostPeerId - 主持人的 Peer ID
+     * @param {string} roomCode - 房間代碼（可選）
      */
-    displayHostPeerId(hostPeerId) {
-        console.log(`顯示主持人 Peer ID: ${hostPeerId}`);
+    displayHostPeerId(hostPeerId, roomCode = null) {
+        console.log(`顯示主持人 Peer ID: ${hostPeerId}, 房間代碼: ${roomCode}`);
         
         // 創建連接資訊元素
         let connectionInfoDiv = document.getElementById('connection-info');
@@ -639,6 +657,11 @@ class UIController {
             connectionInfoDiv = document.createElement('div');
             connectionInfoDiv.id = 'connection-info';
             connectionInfoDiv.className = 'connection-info card';
+            
+            // 決定顯示的參數說明
+            const paramText = roomCode ? `?join=${hostPeerId}&room=${roomCode}` : `?join=${hostPeerId}`;
+            const benefitText = roomCode ? '參賽者點擊連結將自動加入遊戲，無需手動輸入房間代碼' : '參賽者點擊連結將自動進入參賽者模式';
+            
             connectionInfoDiv.innerHTML = `
                 <h3>參賽者連接資訊</h3>
                 <div class="connection-details">
@@ -648,6 +671,7 @@ class UIController {
                             <input type="text" id="connection-url" readonly>
                             <button id="copy-url-btn" class="btn btn-sm">複製</button>
                         </div>
+                        <small>${benefitText}</small>
                     </div>
                     <div class="info-item">
                         <span class="info-label">連接方式二：手動輸入</span>
@@ -656,7 +680,7 @@ class UIController {
                             <code id="host-peer-id">${hostPeerId}</code>
                             <button id="copy-peer-id-btn" class="btn btn-sm">複製</button>
                         </div>
-                        <small>參賽者在加入房間頁面的 URL 後加上: ?join=${hostPeerId}</small>
+                        <small>參賽者在加入房間頁面的 URL 後加上: ${paramText}</small>
                     </div>
                     <div class="info-item">
                         <span class="info-label">QR Code (如支援)</span>
@@ -672,8 +696,12 @@ class UIController {
             }
         }
         
-        // 設定連接 URL
-        const connectionUrl = `${window.location.origin}${window.location.pathname}?join=${hostPeerId}`;
+        // 生成包含房間代碼的連接 URL
+        let connectionUrl = `${window.location.origin}${window.location.pathname}?join=${hostPeerId}`;
+        if (roomCode) {
+            connectionUrl += `&room=${roomCode}`;
+        }
+        
         const connectionUrlInput = document.getElementById('connection-url');
         if (connectionUrlInput) {
             connectionUrlInput.value = connectionUrl;
@@ -1139,36 +1167,28 @@ class UIController {
      * @param {Object} resultData - 結果數據
      */
     displayRoundResult(resultData) {
-        const { inputNumber, targetNumber, isWinner, distance } = resultData;
+        const { inputNumber, targetNumber, isWinner, distance, totalWinRounds } = resultData;
         
-        const roundScoreSection = document.getElementById('round-score-section');
-        const myDrawnNumberElement = document.getElementById('my-drawn-number');
-        const roundTargetNumberElement = document.getElementById('round-target-number');
-        const roundScoreElement = document.getElementById('round-score');
         const scoreStatusMessage = document.getElementById('score-status-message');
-
-        if (roundScoreSection) roundScoreSection.classList.remove('hidden');
-        if (myDrawnNumberElement) myDrawnNumberElement.textContent = inputNumber;
-        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber.toFixed(1);
+        const scoreCalculation = document.querySelector('.score-calculation');
         
-        if (roundScoreElement) {
-            if (isWinner) {
-                roundScoreElement.textContent = '✓ +1分';
-                roundScoreElement.className = 'calc-value winner';
-            } else {
-                roundScoreElement.textContent = '✗ +0分';
-                roundScoreElement.className = 'calc-value';
-            }
+        // 隱藏詳細的計分區塊
+        if (scoreCalculation) {
+            scoreCalculation.style.display = 'none';
         }
 
         if (scoreStatusMessage) {
             if (isWinner) {
-                scoreStatusMessage.textContent = `🎉 恭喜！您最接近目標數字，獲得1分！`;
+                scoreStatusMessage.innerHTML = `🎉 恭喜！您最接近目標數字，獲得1分！<span class="cumulative-score">目前累計得分：${totalWinRounds}分</span>`;
                 scoreStatusMessage.style.color = '#10b981';
             } else {
-                scoreStatusMessage.textContent = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。`;
+                scoreStatusMessage.innerHTML = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。<span class="cumulative-score">目前累計得分：${totalWinRounds}分</span>`;
                 scoreStatusMessage.style.color = '#6b7280';
             }
+            
+            // 顯示結果訊息
+            const roundScoreSection = document.getElementById('round-score-section');
+            if (roundScoreSection) roundScoreSection.classList.remove('hidden');
         }
     }
 
@@ -1217,7 +1237,7 @@ class UIController {
                     <div class="result-player-name">${this.escapeHtml(result.nickname)}</div>
                     <div class="result-number">${result.inputNumber}</div>
                     <div class="result-score ${result.isWinner ? 'winner' : ''}">${result.isWinner ? '✓ 勝利' : `距離: ${distance.toFixed(2)}`}</div>
-                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'}</div>
+                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'} <span class="cumulative-score">(累計: ${result.totalWinRounds}分)</span></div>
                 `;
                 roundResultsList.appendChild(resultCard);
             });
@@ -1778,11 +1798,6 @@ class UIController {
                 window.gameManager.resetGame();
             }
 
-            // 通過 WebRTC 通知重置
-            if (window.webRTCManager) {
-                window.webRTCManager.resetGame('manual');
-            }
-
             // 重置 UI 到初始狀態
             this.resetUIToInitialState();
 
@@ -1801,7 +1816,8 @@ class UIController {
         // 隱藏所有遊戲卡片
         const gameCards = [
             'room-info-card', 'players-list-card', 'lottery-control-card',
-            'round-results-card', 'final-results-card'
+            'round-results-card', 'final-results-card', 'join-game-card', 
+            'waiting-card', 'lottery-card'
         ];
         
         gameCards.forEach(cardId => {
@@ -1816,6 +1832,12 @@ class UIController {
         // 清空動態內容
         const playersList = document.getElementById('players-list');
         if (playersList) playersList.innerHTML = '';
+
+        const playersConnectionList = document.getElementById('players-connection-list');
+        if (playersConnectionList) playersConnectionList.innerHTML = '';
+
+        const otherPlayersList = document.getElementById('other-players-list');
+        if (otherPlayersList) otherPlayersList.innerHTML = '';
 
         const roundResultsList = document.getElementById('round-results-list');
         if (roundResultsList) roundResultsList.innerHTML = '';
@@ -1832,6 +1854,49 @@ class UIController {
 
         const currentRound = document.getElementById('current-round');
         if (currentRound) currentRound.textContent = '1/5';
+
+        // 重置連接狀態指示器
+        const connectionDetails = document.getElementById('connection-details');
+        if (connectionDetails) connectionDetails.textContent = '';
+        
+        const connectionIndicator = document.getElementById('connection-indicator');
+        if (connectionIndicator) {
+            connectionIndicator.classList.add('hidden');
+            connectionIndicator.classList.remove('show'); // 移除show class
+            connectionIndicator.style.display = 'none'; // 強制隱藏
+        }
+        
+        // 重置連接點狀態
+        const connectionDot = document.getElementById('connection-dot');
+        if (connectionDot) {
+            connectionDot.className = 'connection-dot offline';
+        }
+        
+        const connectionText = document.getElementById('connection-text');
+        if (connectionText) connectionText.textContent = '尚未連線';
+        
+        // 重置狀態值
+        const connectionStatus = document.getElementById('connection-status');
+        if (connectionStatus) connectionStatus.textContent = '尚未連線';
+        
+        const playerConnectionStatus = document.getElementById('player-connection-status');
+        if (playerConnectionStatus) playerConnectionStatus.innerHTML = '<span class="connection-indicator offline"></span>尚未連線';
+        
+        // 清空參賽者相關欄位
+        const myNickname = document.getElementById('my-nickname');
+        if (myNickname) myNickname.textContent = '';
+        
+        const joinedRoomCode = document.getElementById('joined-room-code');
+        if (joinedRoomCode) joinedRoomCode.textContent = '';
+        
+        const joinedPlayerCount = document.getElementById('joined-player-count');
+        if (joinedPlayerCount) joinedPlayerCount.textContent = '0/6';
+        
+        // 移除動態創建的連接資訊區塊
+        const connectionInfo = document.getElementById('connection-info');
+        if (connectionInfo) {
+            connectionInfo.remove();
+        }
     }
 
     /**
@@ -1966,7 +2031,7 @@ class UIController {
      */
     handleGameResetEvent(detail) {
         this.resetUIToInitialState();
-        this.showToast('info', '遊戲已重置');
+        this.showToast('success', '遊戲狀態已重置');
     }
 
     /**
