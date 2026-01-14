@@ -258,6 +258,12 @@ small {
     background: rgba(255, 255, 255, 0.95);
 }
 
+.form-input.invalid {
+    border-color: #ef4444;
+    background: rgba(255, 230, 230, 0.9);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
 /* 卡片樣式 */
 .card {
     background: rgba(255, 255, 255, 0.1);
@@ -819,6 +825,11 @@ small {
     padding: 0.25rem 0.75rem;
     border-radius: 0.25rem;
     font-family: 'Courier New', monospace;
+}
+
+.calc-value.winner {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
 }
 
 .calc-item.total .calc-value {
@@ -2220,4 +2231,41 @@ body::before {
     background: linear-gradient(135deg, #f9a3bb, #f592a8);
     color: #5a82a3;
     transform: translateY(-1px);
+}
+
+/* 自動計分狀態樣式 */
+.scoring-info {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.info-text {
+    font-size: 1.1rem;
+    color: #5a82a3;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: rgba(90, 130, 163, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9a9e, #fecfef);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.small-text {
+    font-size: 0.9rem;
+    color: rgba(90, 130, 163, 0.8);
+    line-height: 1.4;
+    margin-top: 1rem;
 }

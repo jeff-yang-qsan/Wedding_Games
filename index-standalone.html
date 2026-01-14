@@ -2406,7 +2406,7 @@ small {
                                     <span id="round-target-number" class="calc-value">--</span>
                                 </div>
                                 <div class="calc-item total">
-                                    <span class="calc-label">本輪得分：</span>
+                                    <span class="calc-label">本輪結果：</span>
                                     <span id="round-score" class="calc-value">--</span>
                                 </div>
                             </div>
@@ -5046,6 +5046,11 @@ class Player {
         this.connectionStatus = ConnectionStatus.ONLINE;
         this.position = null; // 將由遊戲管理器設定
         this.joinedAt = new Date();
+        
+        // 初始化新的計分屬性
+        this.totalWinRounds = 0;
+        this.winHistory = [];
+        this.inputNumbers = [];
     }
 
     /**
@@ -5682,12 +5687,43 @@ class GameManager {
                 roundResults.push({
                     playerId: player.playerId,
                     nickname: player.nickname,
-                    drawnNumber: drawnNumber,
+                    inputNumber: drawnNumber, // 使用 inputNumber 保持一致性
+                    drawnNumber: drawnNumber, // 保留原有字段以防向後相容
                     score: score,
+                    distance: Math.abs(drawnNumber - targetNumber),
                     totalScore: player.totalScore
                 });
             }
         });
+
+        // 計算獲勝者（距離最近的參賽者）
+        if (roundResults.length > 0) {
+            const minDistance = Math.min(...roundResults.map(r => r.distance));
+            roundResults.forEach(result => {
+                result.isWinner = result.distance === minDistance;
+                
+                // 找到對應的參賽者並更新獲勝紀錄
+                const player = this.players.find(p => p.playerId === result.playerId);
+                if (player && result.isWinner) {
+                    // 給獲勝者加1分
+                    if (typeof player.totalWinRounds !== 'number') {
+                        player.totalWinRounds = 0;
+                    }
+                    if (!Array.isArray(player.winHistory)) {
+                        player.winHistory = [];
+                    }
+                    player.totalWinRounds += 1;
+                    player.winHistory.push(true);
+                    console.log(`${player.nickname} 獲勝！總獲勝輪數: ${player.totalWinRounds}`);
+                } else if (player) {
+                    // 非獲勝者記錄
+                    if (!Array.isArray(player.winHistory)) {
+                        player.winHistory = [];
+                    }
+                    player.winHistory.push(false);
+                }
+            });
+        }
 
         return roundResults;
     }
@@ -5746,32 +5782,47 @@ class GameManager {
      * @returns {Array} 最終排名
      */
     calculateFinalRanking() {
-        // 按總得分排序（降序）
-        const sortedPlayers = [...this.players].sort((a, b) => b.totalScore - a.totalScore);
+        // 確保所有玩家都有獲勝輪數屬性
+        this.players.forEach(player => {
+            if (typeof player.totalWinRounds !== 'number') {
+                player.totalWinRounds = 0;
+            }
+            if (!Array.isArray(player.winHistory)) {
+                player.winHistory = [];
+            }
+        });
+
+        // 按總獲勝輪數排序（降序）
+        const sortedPlayers = [...this.players].sort((a, b) => b.totalWinRounds - a.totalWinRounds);
         
         if (sortedPlayers.length === 0) return [];
         
         const ranking = [];
         let currentRank = 1;
-        const highestScore = sortedPlayers[0].totalScore;
+        const highestWinRounds = sortedPlayers[0].totalWinRounds;
         
         for (let i = 0; i < sortedPlayers.length; i++) {
             const player = sortedPlayers[i];
             
-            // 處理並列情況 - 只有當分數不同時才更新排名
-            if (i > 0 && sortedPlayers[i - 1].totalScore !== player.totalScore) {
+            // 處理並列情況 - 只有當獲勝輪數不同時才更新排名
+            if (i > 0 && sortedPlayers[i - 1].totalWinRounds !== player.totalWinRounds) {
                 currentRank = i + 1;
             }
             
-            // 判斷是否為獲勝者（最高分）
-            const isWinner = player.totalScore === highestScore;
+            // 判斷是否為獲勝者（最多獲勝輪數）
+            const isWinner = player.totalWinRounds === highestWinRounds && player.totalWinRounds > 0;
+            
+            // 生成各輪獲勝狀態（作為UI顯示用）
+            const roundScores = (player.winHistory || []).map(won => won ? 1 : 0);
             
             ranking.push({
                 rank: currentRank,
                 playerId: player.playerId,
                 nickname: player.nickname,
-                totalScore: player.totalScore,
-                roundScores: [...player.roundScores],
+                totalWinRounds: player.totalWinRounds,
+                totalScore: player.totalWinRounds, // 為了UI相容性，使用獲勝輪數作為總分
+                roundScores: roundScores, // 各輪獲勝狀態（勝=1，敗=0）
+                winHistory: [...(player.winHistory || [])],
                 isWinner: isWinner
             });
         }
@@ -6892,11 +6943,11 @@ class UIController {
     }
 
     /**
-     * 顯示本輪得分
-     * @param {Object} scoreData - 得分數據
+     * 顯示本輪結果狀態
+     * @param {Object} resultData - 結果數據
      */
-    displayRoundScore(scoreData) {
-        const { drawnNumber, targetNumber, score } = scoreData;
+    displayRoundScore(resultData) {
+        const { drawnNumber, inputNumber, targetNumber, isWinner, distance } = resultData;
         
         const roundScoreSection = document.getElementById('round-score-section');
         const myDrawnNumberElement = document.getElementById('my-drawn-number');
@@ -6905,24 +6956,26 @@ class UIController {
         const scoreStatusMessage = document.getElementById('score-status-message');
 
         if (roundScoreSection) roundScoreSection.classList.remove('hidden');
-        if (myDrawnNumberElement) myDrawnNumberElement.textContent = drawnNumber;
-        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber;
+        if (myDrawnNumberElement) myDrawnNumberElement.textContent = inputNumber || drawnNumber;
+        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber.toFixed(1);
         
         if (roundScoreElement) {
-            roundScoreElement.textContent = score >= 0 ? `+${score}` : score;
-            roundScoreElement.className = 'calc-value' + (score < 0 ? ' negative' : '');
+            if (isWinner) {
+                roundScoreElement.textContent = '✓ +1分';
+                roundScoreElement.className = 'calc-value winner';
+            } else {
+                roundScoreElement.textContent = '✗ +0分';
+                roundScoreElement.className = 'calc-value';
+            }
         }
 
         if (scoreStatusMessage) {
-            if (score > 0) {
-                scoreStatusMessage.textContent = '🎉 太棒了！您的數字比目標數字大！';
+            if (isWinner) {
+                scoreStatusMessage.textContent = `🎉 恭喜！您最接近目標數字，獲得1分！`;
                 scoreStatusMessage.style.color = '#10b981';
-            } else if (score < 0) {
-                scoreStatusMessage.textContent = '😅 您的數字比目標數字小了一些。';
-                scoreStatusMessage.style.color = '#ef4444';
             } else {
-                scoreStatusMessage.textContent = '🎯 完美！您抽中了目標數字！';
-                scoreStatusMessage.style.color = '#f59e0b';
+                scoreStatusMessage.textContent = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。`;
+                scoreStatusMessage.style.color = '#6b7280';
             }
         }
     }
@@ -6952,17 +7005,21 @@ class UIController {
         if (roundResultsList) {
             roundResultsList.innerHTML = '';
             
-            // 按得分排序
-            const sortedResults = [...results].sort((a, b) => b.score - a.score);
+            // 按獲勝狀態排序（獲勝者在前）
+            const sortedResults = [...results].sort((a, b) => {
+                if (a.isWinner && !b.isWinner) return -1;
+                if (!a.isWinner && b.isWinner) return 1;
+                return a.distance - b.distance; // 按距離排序
+            });
             
-            sortedResults.forEach((result, index) => {
+            sortedResults.forEach((result) => {
                 const resultCard = document.createElement('div');
-                resultCard.className = 'result-card' + (index === 0 ? ' winner' : '');
+                resultCard.className = 'result-card' + (result.isWinner ? ' winner' : '');
                 resultCard.innerHTML = `
                     <div class="result-player-name">${this.escapeHtml(result.nickname)}</div>
-                    <div class="result-number">${result.drawnNumber}</div>
-                    <div class="result-score ${result.score < 0 ? 'negative' : ''}">${result.score >= 0 ? '+' + result.score : result.score}</div>
-                    <div class="result-rank">第 ${index + 1} 名</div>
+                    <div class="result-number">${result.inputNumber || result.drawnNumber}</div>
+                    <div class="result-score ${result.isWinner ? 'winner' : ''}">${result.isWinner ? '✓ 勝利' : `距離: ${result.distance.toFixed(1)}`}</div>
+                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'}</div>
                 `;
                 roundResultsList.appendChild(resultCard);
             });
@@ -7203,7 +7260,7 @@ class UIController {
             winnerCard.className = 'winner-card';
             winnerCard.innerHTML = `
                 <div class="winner-nickname">${this.escapeHtml(winner.nickname)}</div>
-                <div class="winner-score">${winner.totalScore >= 0 ? '+' + winner.totalScore : winner.totalScore}</div>
+                <div class="winner-score">${winner.totalWinRounds || 0} 勝</div>
             `;
             winnersList.appendChild(winnerCard);
         });
@@ -7224,9 +7281,9 @@ class UIController {
             const rankingItem = document.createElement('div');
             rankingItem.className = 'final-ranking-item' + (player.isWinner ? ' winner' : '');
             
-            // 生成各輪得分詳情
-            const roundScoreText = player.roundScores.map((score, i) => 
-                `R${i + 1}: ${score >= 0 ? '+' + score : score}`
+            // 產生各輪狀態顯示（獲勝=✓，沒獲勝=✗）
+            const roundScoreText = (player.roundScores || []).map((score, i) => 
+                `R${i + 1}: ${score > 0 ? '\u2713' : '\u2717'}`
             ).join(', ');
             
             rankingItem.innerHTML = `
@@ -7236,7 +7293,7 @@ class UIController {
                     <div class="final-ranking-details">${roundScoreText}</div>
                 </div>
                 <div class="final-ranking-score">
-                    ${player.totalScore >= 0 ? '+' + player.totalScore : player.totalScore}
+                    ${player.totalWinRounds || 0} 勝
                 </div>
             `;
             
@@ -8619,16 +8676,17 @@ class GameController {
         console.log('目標數字設定事件:', data);
         
         if (!this.isHost) {
-            // 參賽者：顯示得分
-            const myScore = data.roundScores.find(score => 
-                score.playerId === this.currentPlayerId
+            // 參賽者：顯示結果狀態
+            const myResult = data.roundScores.find(result => 
+                result.playerId === this.currentPlayerId
             );
             
-            if (myScore) {
+            if (myResult) {
                 window.uiController.displayRoundScore({
-                    drawnNumber: myScore.drawnNumber,
+                    inputNumber: myResult.drawnNumber || myResult.inputNumber,
                     targetNumber: data.targetNumber,
-                    score: myScore.score
+                    isWinner: myResult.isWinner || false,
+                    distance: Math.abs((myResult.drawnNumber || myResult.inputNumber) - data.targetNumber)
                 });
             }
         }

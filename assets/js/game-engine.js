@@ -211,6 +211,11 @@ class Player {
         this.connectionStatus = ConnectionStatus.ONLINE;
         this.position = null; // 將由遊戲管理器設定
         this.joinedAt = new Date();
+        
+        // 初始化新的計分屬性
+        this.totalWinRounds = 0;
+        this.winHistory = [];
+        this.inputNumbers = [];
     }
 
     /**
@@ -241,16 +246,22 @@ class Player {
     }
 
     /**
-     * 抽取數字
-     * @returns {number} 抽中的數字
+     * 輸入數字
+     * @param {number} inputNumber - 手動輸入的數字 (0-100)
+     * @returns {number} 輸入的數字
      */
-    drawNumber() {
+    inputNumber(inputNumber) {
         if (this.currentNumber !== null) {
-            throw new Error('本輪已經抽過數字');
+            throw new Error('本輪已經輸入過數字');
         }
         
-        this.currentNumber = generateRandomNumber();
-        console.log(`${this.nickname} 抽中數字: ${this.currentNumber}`);
+        // 驗證輸入數字
+        if (!Number.isInteger(inputNumber) || inputNumber < 0 || inputNumber > 100) {
+            throw new Error('輸入數字必須是0-100之間的整數');
+        }
+        
+        this.currentNumber = inputNumber;
+        console.log(`${this.nickname} 輸入數字: ${this.currentNumber}`);
         return this.currentNumber;
     }
 
@@ -261,7 +272,7 @@ class Player {
      */
     calculateRoundScore(hostTargetNumber) {
         if (this.currentNumber === null) {
-            throw new Error('尚未抽取數字');
+            throw new Error('尚未輸入數字');
         }
         
         if (hostTargetNumber === null || hostTargetNumber === undefined) {
@@ -274,12 +285,51 @@ class Player {
     }
 
     /**
-     * 添加得分到總分
-     * @param {number} score - 本輪得分
+     * 初始化或升級 Player 實例以支援新版本
+     * （確保向後兼容）
      */
-    addScore(score) {
-        this.totalScore += score;
-        console.log(`${this.nickname} 總得分更新為: ${this.totalScore}`);
+    upgradeToNewVersion() {
+        // 確保新屬性存在
+        if (typeof this.totalWinRounds !== 'number') {
+            this.totalWinRounds = 0;
+        }
+        if (!Array.isArray(this.winHistory)) {
+            this.winHistory = [];
+        }
+        if (!Array.isArray(this.inputNumbers)) {
+            this.inputNumbers = [];
+        }
+        
+        // 如果有舊的屬性，嘗試遷移數據
+        if (typeof this.totalScore === 'number' && this.totalWinRounds === 0) {
+            this.totalWinRounds = Math.max(0, Math.floor(this.totalScore / 10));
+        }
+        if (Array.isArray(this.drawnNumbers) && this.inputNumbers.length === 0) {
+            this.inputNumbers = [...this.drawnNumbers];
+        }
+    }
+
+    /**
+     * 添加獲勝輪數
+     * @param {boolean} isWinner - 是否為本輪獲勝者
+     */
+    addWinRound(isWinner = false) {
+        // 確保新屬性存在（向後兼容舊實例）
+        if (typeof this.totalWinRounds !== 'number') {
+            this.totalWinRounds = 0;
+        }
+        if (!Array.isArray(this.winHistory)) {
+            this.winHistory = [];
+        }
+        if (!Array.isArray(this.inputNumbers)) {
+            this.inputNumbers = [];
+        }
+        
+        if (isWinner) {
+            this.totalWinRounds += 1;
+            console.log(`${this.nickname} 獲勝輪數更新為: ${this.totalWinRounds}`);
+        }
+        this.winHistory.push(isWinner);
     }
 
     /**
@@ -303,10 +353,10 @@ class Player {
     }
 
     /**
-     * 檢查是否已抽取數字
-     * @returns {boolean} 是否已抽取
+     * 檢查是否已輸入數字
+     * @returns {boolean} 是否已輸入
      */
-    hasDrawnNumber() {
+    hasInputNumber() {
         return this.currentNumber !== null;
     }
 
@@ -327,7 +377,7 @@ class Player {
             nickname: this.nickname,
             roomCode: this.roomCode,
             currentNumber: this.currentNumber,
-            totalScore: this.totalScore,
+            totalWinRounds: this.totalWinRounds,
             connectionStatus: this.connectionStatus,
             position: this.position,
             joinedAt: this.joinedAt.toISOString()
@@ -341,7 +391,21 @@ class Player {
     static fromJSON(data) {
         const player = new Player(data.nickname, data.roomCode, data.playerId);
         player.currentNumber = data.currentNumber;
-        player.totalScore = data.totalScore;
+        
+        // 向後兼容：支持舊版本的 totalScore，將其轉換為 totalWinRounds
+        if (typeof data.totalWinRounds === 'number') {
+            player.totalWinRounds = data.totalWinRounds;
+        } else if (typeof data.totalScore === 'number') {
+            // 舊版本兼容：將舊的總分轉換為獲勝輪數（簡化處理）
+            player.totalWinRounds = Math.max(0, Math.floor(data.totalScore / 10)); // 假設每輪最多10分
+        } else {
+            player.totalWinRounds = 0;
+        }
+        
+        // 確保數組屬性存在
+        player.inputNumbers = Array.isArray(data.inputNumbers) ? data.inputNumbers : [];
+        player.winHistory = Array.isArray(data.winHistory) ? data.winHistory : [];
+        
         player.connectionStatus = data.connectionStatus;
         player.position = data.position;
         player.joinedAt = new Date(data.joinedAt);
@@ -427,9 +491,9 @@ class GameRound {
     }
 
     /**
-     * 檢查所有參賽者是否都已抽取數字
+     * 檢查所有參賽者是否都已輸入數字
      * @param {Array} playerIds - 參賽者ID陣列
-     * @returns {boolean} 是否都已抽取
+     * @returns {boolean} 是否都已輸入
      */
     areAllPlayersDrawn(playerIds) {
         return playerIds.every(playerId => 
@@ -593,6 +657,20 @@ class GameManager {
         this.players = [];
         this.rounds = [];
         this.gameResult = null;
+        
+        // 自動升級現有玩家到新版本
+        this.upgradePlayersToNewVersion();
+    }
+
+    /**
+     * 升級所有現有玩家到新版本結構
+     */
+    upgradePlayersToNewVersion() {
+        this.players.forEach(player => {
+            if (player && typeof player.upgradeToNewVersion === 'function') {
+                player.upgradeToNewVersion();
+            }
+        });
     }
 
     /**
@@ -647,6 +725,9 @@ class GameManager {
         // 建立新參賽者
         const player = new Player(nickname, this.gameRoom.roomCode, playerId);
         player.position = this.players.length + 1;
+        
+        // 確保新玩家結構正確
+        player.upgradeToNewVersion();
 
         this.players.push(player);
         
@@ -769,19 +850,22 @@ class GameManager {
             if (!player.roundScores) {
                 player.roundScores = [];
             }
+            // 重置當前數字，允許玩家在新一輪重新輸入
+            player.currentNumber = null;
         });
 
         console.log(`第 ${this.gameRoom.currentRound} 輪抽籤已開始`);
     }
 
     /**
-     * 參賽者抽取數字
+     * 參賽者輸入數字
      * @param {string} playerId - 參賽者ID
-     * @returns {number} 抽中的數字
+     * @param {number} inputNumber - 輸入的數字
+     * @returns {number} 輸入的數字
      */
-    drawNumber(playerId) {
+    inputNumber(playerId, inputNumber) {
         if (!this.gameRoom || this.gameRoom.gameState !== GameState.LOTTERY_IN_PROGRESS) {
-            throw new Error('當前無法抽取數字');
+            throw new Error('當前無法輸入數字');
         }
 
         const player = this.getPlayer(playerId);
@@ -791,41 +875,102 @@ class GameManager {
 
         const roundIndex = this.gameRoom.currentRound - 1;
         
-        // 檢查是否已經抽過
-        if (player.drawnNumbers[roundIndex] !== undefined) {
-            throw new Error('您已經抽過數字了');
+        // 檢查是否已經輸入過
+        if (player.currentNumber !== null) {
+            throw new Error('您已經輸入過數字了');
         }
 
-        // 抽取數字
-        const drawnNumber = generateRandomNumber();
-        player.drawnNumbers[roundIndex] = drawnNumber;
+        // 驗證輸入數字
+        if (!Number.isInteger(inputNumber) || inputNumber < 0 || inputNumber > 100) {
+            throw new Error('輸入數字必須是0-100之間的整數');
+        }
 
-        console.log(`參賽者 ${player.nickname} 在第 ${this.gameRoom.currentRound} 輪抽中數字: ${drawnNumber}`);
+        // 記錄輸入的數字
+        player.currentNumber = inputNumber;
+
+        console.log(`參賽者 ${player.nickname} 在第 ${this.gameRoom.currentRound} 輪輸入數字: ${inputNumber}`);
         
-        return drawnNumber;
+        // 檢查是否所有玩家都已輸入，如果是則自動計算得分
+        const allPlayersHaveNumbers = this.players.every(p => p.currentNumber !== null);
+        if (allPlayersHaveNumbers) {
+            console.log('所有參賽者都已輸入數字，開始自動計算得分');
+            // 在這裡可以觸發自動計分事件，但不直接調用計分方法
+            // 讓 GameController 來處理這個邏輯
+        }
+        
+        return inputNumber;
     }
 
     /**
-     * 設定目標數字並計算得分
-     * @param {number} targetNumber - 目標數字
-     * @returns {Array} 本輪得分結果
+     * 自動計算目標數字並計算得分
+     * @returns {Object} 本輪計分結果
      */
-    setTargetNumber(targetNumber) {
+    calculateAutomaticScores() {
         if (!this.gameRoom || this.gameRoom.gameState !== GameState.LOTTERY_IN_PROGRESS) {
-            throw new Error('當前無法設定目標數字');
+            throw new Error('當前無法計算得分');
         }
 
-        if (targetNumber < 0 || targetNumber > 100 || !Number.isInteger(targetNumber)) {
-            throw new Error('目標數字必須是0-100之間的整數');
+        // 檢查所有玩家是否都已輸入數字
+        const allPlayersHaveNumbers = this.players.every(player => player.currentNumber !== null);
+        if (!allPlayersHaveNumbers) {
+            throw new Error('並非所有參賽者都已輸入數字');
         }
 
-        this.gameRoom.hostTargetNumber = targetNumber;
-        this.gameRoom.transitionTo(GameState.SCORING);
-
-        // 計算本輪得分
-        const roundResults = this.calculateRoundScores();
+        // 計算目標數字：所有參賽者數字的平均值 * 0.8
+        const allNumbers = this.players.map(player => player.currentNumber);
+        const average = allNumbers.reduce((sum, num) => sum + num, 0) / allNumbers.length;
+        const targetNumber = average * 0.8;
         
-        console.log(`目標數字已設定: ${targetNumber}，本輪計分完成`);
+        // 將計算出的目標數字保存到遊戲房間狀態
+        this.gameRoom.hostTargetNumber = targetNumber;
+        
+        console.log(`所有參賽者數字: [${allNumbers.join(', ')}]`);
+        console.log(`平均值: ${average.toFixed(2)}, 目標數字: ${targetNumber.toFixed(2)}`);
+
+        // 計算每個玩家與目標數字的距離
+        const playerDistances = this.players.map(player => ({
+            player: player,
+            distance: Math.abs(player.currentNumber - targetNumber)
+        }));
+
+        // 找出最小距離
+        const minDistance = Math.min(...playerDistances.map(pd => pd.distance));
+        
+        // 找出所有最接近的玩家（處理平手情況）
+        const winners = playerDistances
+            .filter(pd => pd.distance === minDistance)
+            .map(pd => pd.player);
+
+        console.log(`最接近目標數字的參賽者: ${winners.map(p => p.nickname).join(', ')} (距離: ${minDistance.toFixed(2)})`);
+
+        // 更新玩家獲勝輪數和歷史紀錄
+        this.players.forEach(player => {
+            const isWinner = winners.includes(player);
+            player.addWinRound(isWinner);
+            
+            // 確保 inputNumbers 陣列存在
+            if (!Array.isArray(player.inputNumbers)) {
+                player.inputNumbers = [];
+            }
+            player.inputNumbers.push(player.currentNumber);
+        });
+
+        this.gameRoom.transitionTo(GameState.SCORING);
+        
+        const roundResults = {
+            targetNumber: targetNumber,
+            winners: winners.map(p => ({ playerId: p.playerId, nickname: p.nickname })),
+            results: this.players.map(player => ({
+                playerId: player.playerId,
+                nickname: player.nickname,
+                inputNumber: player.currentNumber,
+                distance: Math.abs(player.currentNumber - targetNumber),
+                isWinner: winners.includes(player),
+                totalWinRounds: player.totalWinRounds
+            }))
+        };
+        
+        console.log('本輪計分完成', roundResults);
         
         return roundResults;
     }
@@ -875,11 +1020,35 @@ class GameManager {
             throw new Error('當前無法完成輪次');
         }
 
+        // 獲取目標數字
+        const targetNumber = this.gameRoom.hostTargetNumber;
+        if (targetNumber === null || targetNumber === undefined) {
+            throw new Error('目標數字尚未設定');
+        }
+
+        // 計算每個參賽者與目標數字的距離，找出獲勝者
+        const playerDistances = this.players.map(player => ({
+            player: player,
+            distance: Math.abs(player.currentNumber - targetNumber)
+        }));
+        
+        const minDistance = Math.min(...playerDistances.map(pd => pd.distance));
+        const winners = playerDistances
+            .filter(pd => pd.distance === minDistance)
+            .map(pd => pd.player);
+
         // 生成輪次摘要
         const roundSummary = {
             roundNumber: this.gameRoom.currentRound,
-            targetNumber: this.gameRoom.hostTargetNumber,
-            results: this.calculateRoundScores(),
+            targetNumber: targetNumber,
+            results: this.players.map(player => ({
+                playerId: player.playerId,
+                nickname: player.nickname,
+                inputNumber: player.currentNumber,
+                distance: Math.abs(player.currentNumber - targetNumber),
+                isWinner: winners.includes(player),
+                totalWinRounds: player.totalWinRounds
+            })),
             isGameComplete: this.gameRoom.currentRound >= 5
         };
 
@@ -892,7 +1061,7 @@ class GameManager {
             this.gameRoom.transitionTo(GameState.ROUND_COMPLETE);
         }
 
-        console.log(`第 ${this.gameRoom.currentRound} 輪已完成`);
+        console.log(`第 ${this.gameRoom.currentRound} 輪已完成，目標數字: ${targetNumber}`);
         
         return roundSummary;
     }
@@ -920,32 +1089,38 @@ class GameManager {
      * @returns {Array} 最終排名
      */
     calculateFinalRanking() {
-        // 按總得分排序（降序）
-        const sortedPlayers = [...this.players].sort((a, b) => b.totalScore - a.totalScore);
+        // 按總獲勝輪數排序（降序）
+        const sortedPlayers = [...this.players].sort((a, b) => b.totalWinRounds - a.totalWinRounds);
         
         if (sortedPlayers.length === 0) return [];
         
         const ranking = [];
         let currentRank = 1;
-        const highestScore = sortedPlayers[0].totalScore;
+        const highestWinRounds = sortedPlayers[0].totalWinRounds;
         
         for (let i = 0; i < sortedPlayers.length; i++) {
             const player = sortedPlayers[i];
             
-            // 處理並列情況 - 只有當分數不同時才更新排名
-            if (i > 0 && sortedPlayers[i - 1].totalScore !== player.totalScore) {
+            // 處理並列情況 - 只有當獲勝輪數不同時才更新排名
+            if (i > 0 && sortedPlayers[i - 1].totalWinRounds !== player.totalWinRounds) {
                 currentRank = i + 1;
             }
             
-            // 判斷是否為獲勝者（最高分）
-            const isWinner = player.totalScore === highestScore;
+            // 判斷是否為獲勝者（最多獲勝輪數）
+            const isWinner = player.totalWinRounds === highestWinRounds && player.totalWinRounds > 0;
+            
+            // 產生各輪獲勝狀態（作為UI顯示用）
+            const roundScores = (player.winHistory || []).map(won => won ? 1 : 0);
             
             ranking.push({
                 rank: currentRank,
                 playerId: player.playerId,
                 nickname: player.nickname,
-                totalScore: player.totalScore,
-                roundScores: [...player.roundScores],
+                totalWinRounds: player.totalWinRounds,
+                totalScore: player.totalWinRounds, // 為了UI相容性，使用獲勝輪數作為總分
+                roundScores: roundScores, // 各輪得分（獲勝=1，沒獲勝=0）
+                winHistory: [...(player.winHistory || [])],
+                inputNumbers: [...(player.inputNumbers || [])],
                 isWinner: isWinner
             });
         }
@@ -958,7 +1133,7 @@ class GameManager {
     }
 
     /**
-     * 檢查是否所有參賽者都已抽籤
+     * 檢查是否所有參賽者都已輸入數字
      * @returns {boolean} 是否全部完成
      */
     areAllPlayersDrawn() {

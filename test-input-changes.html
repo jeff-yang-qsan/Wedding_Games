@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數字輸入功能測試</title>
+    <link rel="stylesheet" href="assets/css/game-styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>數字輸入功能測試</h1>
+        
+        <!-- 參賽者輸入介面測試 -->
+        <div class="card">
+            <h2>參賽者輸入介面</h2>
+            
+            <div id="lottery-action-section" class="lottery-action">
+                <div class="lottery-prompt">
+                    <p>🎯 請輸入您的幸運數字！</p>
+                    <p>數字範圍：0 - 100</p>
+                </div>
+                
+                <div class="form-group">
+                    <input type="number" 
+                           id="number-input" 
+                           class="form-input" 
+                           min="0" 
+                           max="100" 
+                           placeholder="輸入 0 到 100 之間的數字" />
+                </div>
+                
+                <button id="submit-number-btn" class="btn btn-primary btn-large lottery-btn" disabled>
+                    確認數字
+                    <small>點擊提交您的數字</small>
+                </button>
+            </div>
+
+            <!-- 輸入結果區域 -->
+            <div id="lottery-result-section" class="lottery-result hidden">
+                <div class="drawn-number-display">
+                    <label class="result-label">您輸入的數字</label>
+                    <div id="drawn-number" class="drawn-number-value">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 測試按鈕 -->
+        <div class="card">
+            <h2>測試控制</h2>
+            <button id="test-input" class="btn btn-secondary">測試輸入驗證</button>
+            <button id="test-display" class="btn btn-secondary">測試顯示結果</button>
+            <button id="reset-ui" class="btn btn-danger">重置介面</button>
+        </div>
+    </div>
+
+    <script>
+        // 簡單的測試腳本
+        document.addEventListener('DOMContentLoaded', function() {
+            const numberInput = document.getElementById('number-input');
+            const submitBtn = document.getElementById('submit-number-btn');
+            const lotteryActionSection = document.getElementById('lottery-action-section');
+            const lotteryResultSection = document.getElementById('lottery-result-section');
+            const drawnNumberElement = document.getElementById('drawn-number');
+
+            // 輸入驗證
+            numberInput.addEventListener('input', function(event) {
+                const value = event.target.value;
+                const number = parseInt(value);
+                
+                if (value === '' || isNaN(number) || number < 0 || number > 100) {
+                    submitBtn.disabled = true;
+                    event.target.classList.add('invalid');
+                } else {
+                    submitBtn.disabled = false;
+                    event.target.classList.remove('invalid');
+                }
+            });
+
+            // 提交按鈕
+            submitBtn.addEventListener('click', function() {
+                const value = numberInput.value;
+                const number = parseInt(value);
+                
+                if (!isNaN(number) && number >= 0 && number <= 100) {
+                    // 顯示結果
+                    displayInputNumber(number);
+                    alert(`您輸入的數字是：${number}`);
+                }
+            });
+
+            // Enter 鍵提交
+            numberInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' && !submitBtn.disabled) {
+                    submitBtn.click();
+                }
+            });
+
+            // 測試函數
+            function displayInputNumber(inputNumber) {
+                submitBtn.disabled = true;
+                numberInput.disabled = true;
+                lotteryActionSection.classList.add('hidden');
+                lotteryResultSection.classList.remove('hidden');
+                drawnNumberElement.textContent = inputNumber;
+            }
+
+            function resetInterface() {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '確認數字';
+                numberInput.disabled = false;
+                numberInput.value = '';
+                numberInput.classList.remove('invalid');
+                lotteryActionSection.classList.remove('hidden');
+                lotteryResultSection.classList.add('hidden');
+            }
+
+            // 測試按鈕事件
+            document.getElementById('test-input').addEventListener('click', function() {
+                numberInput.value = '42';
+                numberInput.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('test-display').addEventListener('click', function() {
+                displayInputNumber(88);
+            });
+
+            document.getElementById('reset-ui').addEventListener('click', resetInterface);
+        });
+    </script>
+</body>
+</html>

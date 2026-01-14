@@ -67,11 +67,26 @@ class GameController {
             });
         }
 
-        // 抽數字按鈕
-        const drawNumberBtn = document.getElementById('draw-number-btn');
-        if (drawNumberBtn) {
-            drawNumberBtn.addEventListener('click', () => {
-                this.drawNumber();
+        // 提交數字按鈕
+        const submitNumberBtn = document.getElementById('submit-number-btn');
+        if (submitNumberBtn) {
+            submitNumberBtn.addEventListener('click', () => {
+                this.submitNumber();
+            });
+        }
+
+        // 數字輸入框
+        const numberInput = document.getElementById('number-input');
+        if (numberInput) {
+            numberInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    this.submitNumber();
+                }
+            });
+            
+            // 輸入驗證
+            numberInput.addEventListener('input', (event) => {
+                this.validateNumberInput(event.target);
             });
         }
 
@@ -79,7 +94,7 @@ class GameController {
         const setTargetBtn = document.getElementById('set-target-btn');
         if (setTargetBtn) {
             setTargetBtn.addEventListener('click', () => {
-                this.setTargetNumber();
+                this.calculateAutomaticScores();
             });
         }
 
@@ -170,12 +185,12 @@ class GameController {
             this.handleLotteryStarted(event.detail);
         });
 
-        window.addEventListener('numberDrawn', (event) => {
-            this.handleNumberDrawn(event.detail);
+        window.addEventListener('numberInputted', (event) => {
+            this.handleNumberInputted(event.detail);
         });
 
-        window.addEventListener('drawNumberRequest', (event) => {
-            this.handleDrawNumberRequest(event.detail);
+        window.addEventListener('inputNumberRequest', (event) => {
+            this.handleInputNumberRequest(event.detail);
         });
 
         window.addEventListener('targetSet', (event) => {
@@ -570,61 +585,96 @@ class GameController {
     }
 
     /**
-     * 參賽者抽數字
+     * 參賽者提交數字
      */
-    drawNumber() {
+    submitNumber() {
         if (this.isHost) {
-            console.error('主持人不能抽數字');
+            console.error('主持人不能輸入數字');
             return;
         }
 
         try {
-            console.log('參賽者抽取數字...');
+            console.log('參賽者提交數字...');
             
-            // 參賽者透過 WebRTC 請求主持人幫忙抽取數字
-            const drawRequest = {
+            // 獲取輸入的數字
+            const numberInput = document.getElementById('number-input');
+            if (!numberInput) {
+                throw new Error('找不到數字輸入框');
+            }
+
+            const inputValue = numberInput.value.trim();
+            if (inputValue === '') {
+                throw new Error('請輸入數字');
+            }
+
+            const inputNumber = parseInt(inputValue);
+            if (isNaN(inputNumber) || inputNumber < 0 || inputNumber > 100) {
+                throw new Error('請輸入0-100之間的有效數字');
+            }
+            
+            // 參賽者透過 WebRTC 傳送數字給主持人
+            const inputRequest = {
                 playerId: this.currentPlayerId,
                 nickname: this.currentNickname,
+                inputNumber: inputNumber,
                 timestamp: Date.now()
             };
             
-            console.log('發送抽取數字請求:', drawRequest);
+            console.log('發送數字輸入請求:', inputRequest);
             
-            // 透過 WebRTC 發送抽取數字請求給主持人
+            // 透過 WebRTC 發送數字輸入請求給主持人
             if (window.webRTCManager) {
                 window.webRTCManager.sendMessage({
-                    type: 'drawNumber',
-                    data: drawRequest
+                    type: 'inputNumber',
+                    data: inputRequest
                 });
+                
+                // 禁用輸入控件
+                numberInput.disabled = true;
+                const submitBtn = document.getElementById('submit-number-btn');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已提交...';
+                }
+                
+                window.uiController.showSuccess(`您輸入的數字是：${inputNumber}`);
             } else {
-                throw new Error('WebRTC 連接不可用');
+                throw new Error('WebRTC 連線未建立');
             }
 
         } catch (error) {
-            console.error('抽數字失敗:', error);
-            window.uiController.showError('抽數字失敗: ' + error.message);
+            console.error('提交數字失敗:', error);
+            window.uiController.showError('提交數字失敗: ' + error.message);
         }
     }
 
     /**
-     * 設定目標數字 (主持人)
+     * 驗證數字輸入
+     * @param {HTMLInputElement} inputElement - 輸入框元素
      */
-    setTargetNumber() {
-        if (!this.isHost) {
-            console.error('只有主持人可以設定目標數字');
-            return;
+    validateNumberInput(inputElement) {
+        const value = inputElement.value;
+        const number = parseInt(value);
+        
+        const submitBtn = document.getElementById('submit-number-btn');
+        if (!submitBtn) return;
+        
+        if (value === '' || isNaN(number) || number < 0 || number > 100) {
+            submitBtn.disabled = true;
+            inputElement.classList.add('invalid');
+        } else {
+            submitBtn.disabled = false;
+            inputElement.classList.remove('invalid');
         }
+    }
 
+    /**
+     * 自動計算得分 (當所有參賽者都輸入數字後調用)
+     */
+    calculateAutomaticScores() {
         try {
-            const targetNumberInput = document.getElementById('target-number-input');
-            if (!targetNumberInput) {
-                throw new Error('找不到目標數字輸入框');
-            }
-
-            const targetNumber = parseInt(targetNumberInput.value);
-            
-            // 設定目標數字並計算得分
-            const roundResults = window.gameManager.setTargetNumber(targetNumber);
+            // 自動計算目標數字並計分
+            const roundResults = window.gameManager.calculateAutomaticScores();
             
             // 完成本輪
             const roundSummary = window.gameManager.completeRound();
@@ -636,12 +686,21 @@ class GameController {
             // 顯示結果
             window.uiController.displayRoundResults(roundSummary);
 
-            window.uiController.showSuccess(`目標數字已設定為 ${targetNumber}，本輪計分完成！`);
-            console.log(`目標數字設定: ${targetNumber}`);
+            // 廣播結果到所有參賽者
+            if (window.webRTCManager) {
+                window.webRTCManager.sendMessage({
+                    type: 'AUTOMATIC_SCORING_COMPLETE',
+                    data: {
+                        roundResults: roundResults,
+                        roundSummary: roundSummary
+                    }
+                });
+            }
 
+            console.log('自動計分完成');
         } catch (error) {
-            console.error('設定目標數字失敗:', error);
-            window.uiController.showError('設定目標數字失敗: ' + error.message);
+            console.error('自動計分失敗:', error);
+            window.uiController.showError('自動計分失敗: ' + error.message);
         }
     }
 
@@ -831,7 +890,7 @@ class GameController {
         // 在實際版本中，這會透過 WebRTC 廣播給所有參賽者
         // 這裡模擬參賽者介面的更新
         
-        // 如果當前是參賽者角色，啟用抽籤按鈕
+        // 如果當前是參賽者角色，啟用輸入介面
         if (!this.isHost) {
             const playerData = {
                 nickname: 'Test Player',
@@ -839,7 +898,7 @@ class GameController {
             };
             
             window.uiController.showPlayerLottery(playerData);
-            window.uiController.enableLotteryButton();
+            window.uiController.enableInputInterface();
         }
     }
 
@@ -871,10 +930,10 @@ class GameController {
                 roundNumber: data.roundNumber || window.gameManager?.gameRoom?.currentRound || 1
             };
             
-            console.log('準備更新參賽者抽籤介面:', playerData);
+            console.log('準備更新參賽者輸入介面:', playerData);
             window.uiController.showPlayerLottery(playerData);
-            window.uiController.enableLotteryButton();
-            console.log('參賽者抽籤介面更新完成');
+            window.uiController.enableInputInterface();
+            console.log('參賽者輸入介面更新完成');
         } else {
             // 主持人：更新主持人介面狀態
             console.log('主持人收到抽籤開始事件，輪次:', data.roundNumber);
@@ -882,23 +941,23 @@ class GameController {
     }
 
     /**
-     * 處理抽取數字請求 (主持人端)
-     * @param {Object} data - 抽取數字請求數據
+     * 處理輸入數字請求 (主持人端)
+     * @param {Object} data - 輸入數字請求數據
      */
-    handleDrawNumberRequest(data) {
-        console.log('=== handleDrawNumberRequest 被調用 ===');
+    handleInputNumberRequest(data) {
+        console.log('=== handleInputNumberRequest 被調用 ===');
         console.log('請求數據:', data);
         
         if (!this.isHost) {
-            console.log('只有主持人可以處理抽取數字請求');
+            console.log('只有主持人可以處理輸入數字請求');
             return;
         }
         
         try {
-            console.log(`處理玩家 ${data.playerId} 的抽取數字請求`);
+            console.log(`處理玩家 ${data.playerId} 的輸入數字請求: ${data.inputNumber}`);
             
-            // 在主持人端執行抽取數字
-            const drawnNumber = window.gameManager.drawNumber(data.playerId);
+            // 在主持人端處理輸入數字
+            const inputNumber = window.gameManager.inputNumber(data.playerId, data.inputNumber);
             
             // 儲存狀態
             window.storageManager.savePlayers(window.gameManager.getPlayersList());
@@ -907,33 +966,42 @@ class GameController {
             const responseData = {
                 playerId: data.playerId,
                 nickname: data.nickname,
-                drawnNumber: drawnNumber,
+                inputNumber: inputNumber,
                 roundNumber: window.gameManager.gameRoom.currentRound,
                 timestamp: Date.now()
             };
             
-            console.log('抽數字成功，發送回覆:', responseData);
+            console.log('輸入數字成功，發送回覆:', responseData);
             
-            // 廣播數字抽中事件給所有參賽者
-            window.dispatchEvent(new CustomEvent('numberDrawn', {
+            // 廣播數字輸入事件給所有參賽者
+            window.dispatchEvent(new CustomEvent('numberInputted', {
                 detail: responseData
             }));
             
             // 透過 WebRTC 廣播給所有參賽者
             if (window.webRTCManager) {
                 window.webRTCManager.sendMessage({
-                    type: 'numberDrawn',
+                    type: 'numberInputted',
                     data: responseData
                 });
             }
             
+            // 檢查是否所有參賽者都已輸入數字，如果是則自動計分
+            const allPlayersHaveNumbers = window.gameManager.players.every(p => p.currentNumber !== null);
+            if (allPlayersHaveNumbers) {
+                console.log('所有參賽者都已輸入數字，開始自動計分');
+                setTimeout(() => {
+                    this.calculateAutomaticScores();
+                }, 1000); // 延遲1秒讓UI更新
+            }
+            
         } catch (error) {
-            console.error('處理抽取數字請求失敗:', error);
+            console.error('處理輸入數字請求失敗:', error);
             
             // 發送錯誤回覆給請求者
             if (window.webRTCManager) {
                 window.webRTCManager.sendMessage({
-                    type: 'drawNumberError',
+                    type: 'inputNumberError',
                     data: {
                         playerId: data.playerId,
                         error: error.message,
@@ -945,27 +1013,31 @@ class GameController {
     }
 
     /**
-     * 處理數字抽中事件
-     * @param {Object} data - 抽中數據
+     * 處理數字輸入事件
+     * @param {Object} data - 輸入數據
      */
-    handleNumberDrawn(data) {
-        console.log('數字抽中事件:', data);
+    handleNumberInputted(data) {
+        console.log('數字輸入事件:', data);
         
         if (!this.isHost) {
-            // 參賽者：只顯示自己抽中的數字
+            // 參賽者：只顯示自己輸入的數字
             if (data.playerId === this.currentPlayerId) {
-                console.log(`我抽中了數字: ${data.drawnNumber}`);
-                window.uiController.displayDrawnNumber(data.drawnNumber);
-                window.uiController.showSuccess(`您抽中了數字: ${data.drawnNumber}`);
+                console.log(`我輸入了數字: ${data.inputNumber}`);
+                window.uiController.displayInputNumber(data.inputNumber);
+                window.uiController.showSuccess(`您輸入了數字: ${data.inputNumber}`);
                 
-                // 禁用抽籤按鈕，防止重複抽取
-                const drawBtn = document.getElementById('draw-number-btn');
-                if (drawBtn) {
-                    drawBtn.disabled = true;
-                    drawBtn.textContent = '已抽取';
+                // 禁用輸入控件，防止重複輸入
+                const submitBtn = document.getElementById('submit-number-btn');
+                const numberInput = document.getElementById('number-input');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '已提交';
+                }
+                if (numberInput) {
+                    numberInput.disabled = true;
                 }
             } else {
-                console.log(`其他玩家 ${data.nickname} 抽中了數字: ${data.drawnNumber}`);
+                console.log(`其他玩家 ${data.nickname} 輸入了數字: ${data.inputNumber}`);
             }
         } else {
             // 主持人：更新投影幕顯示

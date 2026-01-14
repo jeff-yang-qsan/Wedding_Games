@@ -11,7 +11,7 @@
   roomCode: string,           // 4-6位數字房間代碼
   currentRound: number,       // 當前輪數 (1-5)
   gameState: GameState,       // 遊戲狀態枚舉
-  hostTargetNumber: number,   // 主持人目標數字 (0-100)
+  calculatedTargetNumber: number,   // 系統計算的目標數字 (平均*0.8)
   maxPlayers: number,         // 最大參賽者數量 (固定為5)
   createdAt: Date,           // 房間建立時間
   updatedAt: Date            // 最後更新時間
@@ -19,7 +19,7 @@
 
 enum GameState {
   WAITING = "waiting",           // 等待參賽者加入
-  LOTTERY_IN_PROGRESS = "lottery_in_progress",  // 抽籤進行中
+  LOTTERY_IN_PROGRESS = "lottery_in_progress",  // 輸入進行中
   SCORING = "scoring",           // 計分階段
   ROUND_COMPLETE = "round_complete",  // 本輪完成
   GAME_FINISHED = "game_finished"     // 遊戲結束
@@ -32,8 +32,8 @@ enum GameState {
   playerId: string,           // 唯一識別碼 (UUID)
   nickname: string,           // 參賽者暱稱
   roomCode: string,           // 所屬房間代碼
-  currentNumber: number,      // 當前抽中數字 (0-100, null if not drawn)
-  totalScore: number,         // 累計總得分
+  currentNumber: number,      // 當前輸入數字 (0-100, null if not entered)
+  totalWinRounds: number,     // 累計獲勝輪數
   connectionStatus: ConnectionStatus,  // 連線狀態
   position: number,           // 顯示位置 (1-5)
   joinedAt: Date             // 加入時間
@@ -52,17 +52,18 @@ enum ConnectionStatus {
   roundId: string,            // 輪次唯一識別碼
   roomCode: string,           // 所屬房間代碼
   roundNumber: number,        // 輪數 (1-5)
-  hostTargetNumber: number,   // 主持人目標數字
-  playerScores: PlayerScore[], // 所有參賽者該輪得分
+  calculatedTargetNumber: number,   // 系統計算的目標數字 (平均*0.8)
+  playerResults: PlayerRoundResult[], // 所有參賽者該輪結果
   isComplete: boolean,        // 是否完成
   completedAt: Date          // 完成時間
 }
 
-type PlayerScore = {
+type PlayerRoundResult = {
   playerId: string,           // 參賽者ID
-  drawnNumber: number,        // 抽中數字
-  score: number,              // 該輪得分 (drawnNumber - hostTargetNumber)
-  drawnAt: Date              // 抽籤時間
+  inputNumber: number,        // 輸入數字
+  distanceToTarget: number,   // 與目標數字的距離
+  isWinner: boolean,          // 是否為該輪獲勝者 (最接近目標數字)
+  inputAt: Date              // 輸入時間
 }
 ```
 
@@ -79,8 +80,12 @@ type PlayerScore = {
 
 type PlayerRanking = {
   playerId: string,           // 參賽者ID
-  nickname: string,           // 暱稱
-  totalScore: number,         // 總得分
+  nickname: string,           // 參賽者暱稱
+  totalWinRounds: number,     // 總獲勝輪數
+  rank: number,               // 排名 (1為最高)
+  isTied: boolean            // 是否並列
+}
+```
   rank: number,               // 排名
   roundScores: number[]       // 各輪得分記錄
 }
@@ -104,14 +109,14 @@ type PlayerRanking = {
 - `roundNumber`: 1-5 之間的整數
 - `hostTargetNumber`: 0-100 之間的整數
 - `playerScores`: 每個房間每輪最多10筆記錄 (根據設定的參賽者人數)
-- `score`: drawnNumber - hostTargetNumber 的計算結果
+- `score`: inputNumber - hostTargetNumber 的計算結果
 
 ## 狀態轉換規則
 
 ### 遊戲狀態轉換
 ```
-WAITING → LOTTERY_IN_PROGRESS  // 主持人啟動抽籤
-LOTTERY_IN_PROGRESS → SCORING  // 所有參賽者完成抽籤
+WAITING → LOTTERY_IN_PROGRESS  // 主持人啟動數字輸入
+LOTTERY_IN_PROGRESS → SCORING  // 所有參賽者完成輸入
 SCORING → ROUND_COMPLETE      // 計分完成
 ROUND_COMPLETE → LOTTERY_IN_PROGRESS  // 開始下一輪 (未達5輪)
 ROUND_COMPLETE → GAME_FINISHED       // 完成第5輪

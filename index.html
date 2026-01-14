@@ -189,28 +189,22 @@
                         
                         <div class="lottery-actions">
                             <button id="start-lottery-btn" class="btn btn-primary btn-large">
-                                開始第一輪抽籤
-                                <small>讓參賽者開始抽取數字</small>
+                                開始輸入數字
+                                <small>讓參賽者開始輸入數字</small>
                             </button>
                             
-                            <div id="target-number-section" class="form-section hidden">
-                                <h3>設定目標數字</h3>
-                                <div class="form-group">
-                                    <label for="target-number-input" class="form-label">目標數字 (0-100)</label>
-                                    <input 
-                                        type="number" 
-                                        id="target-number-input" 
-                                        class="form-input" 
-                                        placeholder="輸入0-100之間的數字"
-                                        min="0"
-                                        max="100"
-                                        required
-                                    >
+                            <div id="scoring-status-section" class="form-section hidden">
+                                <h3>自動計分進行中</h3>
+                                <div class="scoring-info">
+                                    <p class="info-text">等待所有參賽者輸入數字...</p>
+                                    <div id="input-progress" class="progress-bar">
+                                        <div id="progress-fill" class="progress-fill"></div>
+                                    </div>
+                                    <p class="small-text">
+                                        系統將自動計算目標數字（所有參賽者數字平均 × 0.8），<br>
+                                        最接近目標數字的參賽者將獲得1分
+                                    </p>
                                 </div>
-                                <button id="set-target-btn" class="btn btn-success">
-                                    確認目標數字
-                                    <small>開始計算得分</small>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -391,23 +385,33 @@
                             </div>
                         </div>
 
-                        <!-- 抽籤按鈕區域 -->
+                        <!-- 數字輸入區域 -->
                         <div id="lottery-action-section" class="lottery-action">
                             <div class="lottery-prompt">
-                                <p>🎲 準備抽取您的幸運數字！</p>
+                                <p>🎯 請輸入您的幸運數字！</p>
                                 <p>數字範圍：0 - 100</p>
                             </div>
                             
-                            <button id="draw-number-btn" class="btn btn-primary btn-large lottery-btn" disabled>
-                                抽取數字
-                                <small>點擊獲得隨機數字</small>
+                            <div class="form-group">
+                                <input type="number" 
+                                       id="number-input" 
+                                       class="form-input" 
+                                       min="0" 
+                                       max="100" 
+                                       placeholder="輸入 0 到 100 之間的數字"
+                                       disabled />
+                            </div>
+                            
+                            <button id="submit-number-btn" class="btn btn-primary btn-large lottery-btn" disabled>
+                                確認數字
+                                <small>點擊提交您的數字</small>
                             </button>
                         </div>
 
-                        <!-- 抽籤結果區域 -->
+                        <!-- 輸入結果區域 -->
                         <div id="lottery-result-section" class="lottery-result hidden">
                             <div class="drawn-number-display">
-                                <label class="result-label">您抽中的數字</label>
+                                <label class="result-label">您輸入的數字</label>
                                 <div id="drawn-number" class="drawn-number-value">--</div>
                             </div>
                             
@@ -500,13 +504,13 @@
     </div>
 
     <!-- JavaScript 模組 - 同步載入確保順序 -->
-    <script src="assets/js/config-manager.js?v=20260112"></script>
-    <script src="assets/js/storage-manager.js?v=20260112"></script>
-    <script src="assets/js/error-handler.js?v=20260112"></script>
-    <script src="assets/js/game-engine.js?v=20260112"></script>
-    <script src="assets/js/webrtc-manager.js?v=20260112"></script>
-    <script src="assets/js/ui-controller.js?v=20260112"></script>
-    <script src="assets/js/game-controller.js?v=20260112"></script>
+    <script src="assets/js/config-manager.js?v=20260114b"></script>
+    <script src="assets/js/storage-manager.js?v=20260114b"></script>
+    <script src="assets/js/error-handler.js?v=20260114b"></script>
+    <script src="assets/js/game-engine.js?v=20260114b"></script>
+    <script src="assets/js/webrtc-manager.js?v=20260114b"></script>
+    <script src="assets/js/ui-controller.js?v=20260114b"></script>
+    <script src="assets/js/game-controller.js?v=20260114b"></script>
     
     <script>
         // 等待 DOM 載入完成後初始化

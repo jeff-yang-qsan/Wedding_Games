@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新遊戲規則測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans TC', sans-serif;
+            line-height: 1.6;
+            color: #5a82a3;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 25%, #fecfef 75%, #ff9a9e 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #5a82a3;
+            text-align: center;
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 2px solid #ff9a9e;
+            border-radius: 10px;
+        }
+        .input-group {
+            margin: 1rem 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        button {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            color: #5a82a3;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .result {
+            background: rgba(255, 154, 158, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .winner {
+            background: rgba(255, 154, 158, 0.3);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin: 0.2rem 0;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>數字輸入遊戲 - 新規則測試</h1>
+        
+        <div class="test-section">
+            <h2>遊戲規則說明</h2>
+            <p><strong>新規則：</strong></p>
+            <ul>
+                <li>參賽者手動輸入 0-100 之間的數字</li>
+                <li>系統自動計算目標數字：所有參賽者數字平均值 × 0.8</li>
+                <li>最接近目標數字的參賽者獲得 1 分，其餘參賽者 0 分</li>
+                <li>如有多位參賽者距離相等，則同時獲得 1 分</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>測試計算器</h2>
+            <div class="input-group">
+                <label>輸入參賽者數字（用逗號分隔，例如：45,67,23,89,12）</label>
+                <input type="text" id="player-numbers" placeholder="45,67,23,89,12">
+            </div>
+            <button onclick="calculateResult()">計算結果</button>
+            <div id="calculation-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>預設測試案例</h2>
+            <button onclick="testCase1()">測試案例1: 45,67,23,89,12</button>
+            <button onclick="testCase2()">測試案例2: 50,50,50,50,50</button>
+            <button onclick="testCase3()">測試案例3: 10,20,30,90,100</button>
+            <button onclick="testCase4()">測試案例4: 25,35,45,55,65</button>
+        </div>
+
+        <div id="results-display"></div>
+    </div>
+
+    <script>
+        function calculateResult() {
+            const input = document.getElementById('player-numbers').value.trim();
+            if (!input) {
+                alert('請輸入參賽者數字');
+                return;
+            }
+
+            try {
+                const numbers = input.split(',').map(n => parseInt(n.trim()));
+                
+                // 驗證數字
+                if (numbers.some(n => isNaN(n) || n < 0 || n > 100)) {
+                    alert('請輸入有效的數字（0-100）');
+                    return;
+                }
+
+                displayCalculationResult(numbers);
+            } catch (error) {
+                alert('輸入格式錯誤，請使用逗號分隔數字');
+            }
+        }
+
+        function displayCalculationResult(numbers) {
+            // 計算平均值和目標數字
+            const average = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+            const targetNumber = average * 0.8;
+
+            // 計算每個數字與目標數字的距離
+            const distances = numbers.map((num, index) => ({
+                index: index + 1,
+                number: num,
+                distance: Math.abs(num - targetNumber)
+            }));
+
+            // 找出最小距離
+            const minDistance = Math.min(...distances.map(d => d.distance));
+
+            // 找出獲勝者
+            const winners = distances.filter(d => d.distance === minDistance);
+
+            // 顯示結果
+            let resultHtml = `
+                <div class="result">
+                    <h3>計算結果</h3>
+                    <p><strong>參賽者數字：</strong>[${numbers.join(', ')}]</p>
+                    <p><strong>平均值：</strong>${average.toFixed(2)}</p>
+                    <p><strong>目標數字：</strong>${targetNumber.toFixed(2)}</p>
+                    <p><strong>最小距離：</strong>${minDistance.toFixed(2)}</p>
+                    <h4>詳細結果：</h4>
+            `;
+
+            distances.forEach(d => {
+                const isWinner = d.distance === minDistance;
+                resultHtml += `
+                    <div class="${isWinner ? 'winner' : ''}">
+                        參賽者 ${d.index}: 數字 ${d.number}, 距離 ${d.distance.toFixed(2)}${isWinner ? ' ✓ 獲勝' : ''}
+                    </div>
+                `;
+            });
+
+            resultHtml += `<p><strong>本輪獲勝者：</strong>${winners.map(w => `參賽者 ${w.index}`).join(', ')}</p></div>`;
+
+            document.getElementById('calculation-result').innerHTML = resultHtml;
+        }
+
+        function testCase1() {
+            document.getElementById('player-numbers').value = '45,67,23,89,12';
+            calculateResult();
+        }
+
+        function testCase2() {
+            document.getElementById('player-numbers').value = '50,50,50,50,50';
+            calculateResult();
+        }
+
+        function testCase3() {
+            document.getElementById('player-numbers').value = '10,20,30,90,100';
+            calculateResult();
+        }
+
+        function testCase4() {
+            document.getElementById('player-numbers').value = '25,35,45,55,65';
+            calculateResult();
+        }
+    </script>
+</body>
+</html>

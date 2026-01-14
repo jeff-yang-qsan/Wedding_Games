@@ -439,19 +439,19 @@ class WebRTCManager {
             case 'playerJoined':
                 window.dispatchEvent(new CustomEvent('playerJoined', { detail: data }));
                 break;
-            case 'numberDrawn':
-                window.dispatchEvent(new CustomEvent('numberDrawn', { detail: data }));
+            case 'numberInputted':
+                window.dispatchEvent(new CustomEvent('numberInputted', { detail: data }));
                 break;
-            case 'drawNumberError':
+            case 'inputNumberError':
                 if (!this.isHost) {
-                    console.error('抽取數字失敗:', data.error);
-                    window.uiController?.showError('抽取數字失敗: ' + data.error);
+                    console.error('輸入數字失敗:', data.error);
+                    window.uiController?.showError('輸入數字失敗: ' + data.error);
                 }
                 break;
-            case 'drawNumber':
+            case 'inputNumber':
                 if (this.isHost) {
-                    console.log(`玩家 ${senderId} 請求抽取數字`);
-                    window.dispatchEvent(new CustomEvent('drawNumberRequest', { 
+                    console.log(`玩家 ${senderId} 請求輸入數字: ${data.inputNumber}`);
+                    window.dispatchEvent(new CustomEvent('inputNumberRequest', { 
                         detail: { ...data, playerId: senderId }
                     }));
                 }

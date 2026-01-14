@@ -999,15 +999,22 @@ class UIController {
      * 重置抽籤介面狀態
      */
     resetLotteryInterface() {
-        const drawNumberBtn = document.getElementById('draw-number-btn');
+        const submitNumberBtn = document.getElementById('submit-number-btn');
+        const numberInput = document.getElementById('number-input');
         const lotteryActionSection = document.getElementById('lottery-action-section');
         const lotteryResultSection = document.getElementById('lottery-result-section');
         const roundScoreSection = document.getElementById('round-score-section');
         const lotteryPlayerStatus = document.getElementById('lottery-player-status');
 
-        if (drawNumberBtn) {
-            drawNumberBtn.disabled = false;
-            drawNumberBtn.textContent = '抽取數字';
+        if (submitNumberBtn) {
+            submitNumberBtn.disabled = false;
+            submitNumberBtn.textContent = '確認數字';
+        }
+
+        if (numberInput) {
+            numberInput.disabled = false;
+            numberInput.value = '';
+            numberInput.classList.remove('invalid');
         }
 
         if (lotteryActionSection) lotteryActionSection.classList.remove('hidden');
@@ -1037,66 +1044,102 @@ class UIController {
     }
 
     /**
-     * 啟用參賽者抽籤按鈕
+     * 啟用參賽者輸入介面
      */
-    enableLotteryButton() {
-        const drawNumberBtn = document.getElementById('draw-number-btn');
+    enableInputInterface() {
+        const submitNumberBtn = document.getElementById('submit-number-btn');
+        const numberInput = document.getElementById('number-input');
         const lotteryPlayerStatus = document.getElementById('lottery-player-status');
 
-        if (drawNumberBtn) {
-            drawNumberBtn.disabled = false;
-            const smallElement = drawNumberBtn.querySelector('small');
+        if (numberInput) {
+            numberInput.disabled = false;
+        }
+
+        if (submitNumberBtn) {
+            submitNumberBtn.disabled = true; // 預設禁用，直到輸入有效數字
+            const smallElement = submitNumberBtn.querySelector('small');
             if (smallElement) {
-                smallElement.textContent = '點擊獲得隨機數字';
+                smallElement.textContent = '點擊提交您的數字';
             } else {
-                console.warn('draw-number-btn 中的 small 元素未找到');
+                console.warn('submit-number-btn 中的 small 元素未找到');
             }
         } else {
-            console.warn('draw-number-btn 元素未找到');
+            console.warn('submit-number-btn 元素未找到');
         }
 
         if (lotteryPlayerStatus) {
-            lotteryPlayerStatus.textContent = '可以抽籤';
+            lotteryPlayerStatus.textContent = '請輸入數字';
         } else {
             console.warn('lottery-player-status 元素未找到');
         }
     }
 
     /**
-     * 顯示抽中的數字
-     * @param {number} drawnNumber - 抽中的數字
+     * 顯示輸入的數字
+     * @param {number} inputNumber - 輸入的數字
      */
-    displayDrawnNumber(drawnNumber) {
-        const drawNumberBtn = document.getElementById('draw-number-btn');
+    displayInputNumber(inputNumber) {
+        const submitNumberBtn = document.getElementById('submit-number-btn');
+        const numberInput = document.getElementById('number-input');
         const lotteryActionSection = document.getElementById('lottery-action-section');
         const lotteryResultSection = document.getElementById('lottery-result-section');
         const drawnNumberElement = document.getElementById('drawn-number');
         const lotteryPlayerStatus = document.getElementById('lottery-player-status');
 
-        if (drawNumberBtn) drawNumberBtn.disabled = true;
+        if (submitNumberBtn) submitNumberBtn.disabled = true;
+        if (numberInput) numberInput.disabled = true;
         if (lotteryActionSection) lotteryActionSection.classList.add('hidden');
         if (lotteryResultSection) lotteryResultSection.classList.remove('hidden');
-        if (drawnNumberElement) drawnNumberElement.textContent = drawnNumber;
-        if (lotteryPlayerStatus) lotteryPlayerStatus.textContent = '已完成抽籤';
+        if (drawnNumberElement) drawnNumberElement.textContent = inputNumber;
+        if (lotteryPlayerStatus) lotteryPlayerStatus.textContent = '已完成輸入';
     }
 
     /**
-     * 顯示目標數字設定區域 (主持人)
+     * 顯示自動計分狀態區域 (主持人)
      */
-    showTargetNumberSection() {
-        const targetNumberSection = document.getElementById('target-number-section');
+    showScoringStatusSection() {
+        const scoringStatusSection = document.getElementById('scoring-status-section');
         const startLotteryBtn = document.getElementById('start-lottery-btn');
 
-        if (targetNumberSection) targetNumberSection.classList.remove('hidden');
+        if (scoringStatusSection) scoringStatusSection.classList.remove('hidden');
         if (startLotteryBtn) startLotteryBtn.disabled = true;
+        
+        // 更新進度顯示
+        this.updateScoringProgress();
     }
 
     /**
-     * 顯示本輪得分
-     * @param {Object} scoreData - 得分數據
+     * 更新計分進度
      */
-    displayRoundScore(scoreData) {
-        const { drawnNumber, targetNumber, score } = scoreData;
+    updateScoringProgress() {
+        if (!window.gameManager || !window.gameManager.players) return;
+        
+        const players = window.gameManager.players;
+        const playersWithNumbers = players.filter(p => p.currentNumber !== null);
+        const progress = players.length > 0 ? (playersWithNumbers.length / players.length) * 100 : 0;
+        
+        const progressFill = document.getElementById('progress-fill');
+        const infoText = document.querySelector('.info-text');
+        
+        if (progressFill) {
+            progressFill.style.width = `${progress}%`;
+        }
+        
+        if (infoText) {
+            if (progress === 100) {
+                infoText.textContent = '所有參賽者都已輸入，正在計算得分...';
+            } else {
+                infoText.textContent = `等待參賽者輸入數字... (${playersWithNumbers.length}/${players.length})`;
+            }
+        }
+    }
+
+    /**
+     * 顯示本輪結果狀態
+     * @param {Object} resultData - 結果數據
+     */
+    displayRoundResult(resultData) {
+        const { inputNumber, targetNumber, isWinner, distance } = resultData;
         
         const roundScoreSection = document.getElementById('round-score-section');
         const myDrawnNumberElement = document.getElementById('my-drawn-number');
@@ -1105,24 +1148,26 @@ class UIController {
         const scoreStatusMessage = document.getElementById('score-status-message');
 
         if (roundScoreSection) roundScoreSection.classList.remove('hidden');
-        if (myDrawnNumberElement) myDrawnNumberElement.textContent = drawnNumber;
-        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber;
+        if (myDrawnNumberElement) myDrawnNumberElement.textContent = inputNumber;
+        if (roundTargetNumberElement) roundTargetNumberElement.textContent = targetNumber.toFixed(1);
         
         if (roundScoreElement) {
-            roundScoreElement.textContent = score >= 0 ? `+${score}` : score;
-            roundScoreElement.className = 'calc-value' + (score < 0 ? ' negative' : '');
+            if (isWinner) {
+                roundScoreElement.textContent = '✓ +1分';
+                roundScoreElement.className = 'calc-value winner';
+            } else {
+                roundScoreElement.textContent = '✗ +0分';
+                roundScoreElement.className = 'calc-value';
+            }
         }
 
         if (scoreStatusMessage) {
-            if (score > 0) {
-                scoreStatusMessage.textContent = '🎉 太棒了！您的數字比目標數字大！';
+            if (isWinner) {
+                scoreStatusMessage.textContent = `🎉 恭喜！您最接近目標數字，獲得1分！`;
                 scoreStatusMessage.style.color = '#10b981';
-            } else if (score < 0) {
-                scoreStatusMessage.textContent = '😅 您的數字比目標數字小了一些。';
-                scoreStatusMessage.style.color = '#ef4444';
             } else {
-                scoreStatusMessage.textContent = '🎯 完美！您抽中了目標數字！';
-                scoreStatusMessage.style.color = '#f59e0b';
+                scoreStatusMessage.textContent = `距離目標數字 ${distance.toFixed(1)}，本輪未獲勝。`;
+                scoreStatusMessage.style.color = '#6b7280';
             }
         }
     }
@@ -1152,17 +1197,27 @@ class UIController {
         if (roundResultsList) {
             roundResultsList.innerHTML = '';
             
-            // 按得分排序
-            const sortedResults = [...results].sort((a, b) => b.score - a.score);
+            // 按勝利狀態排序，然後按總勝場排序
+            const sortedResults = [...results].sort((a, b) => {
+                if (a.isWinner && !b.isWinner) return -1;
+                if (!a.isWinner && b.isWinner) return 1;
+                return b.totalWinRounds - a.totalWinRounds;
+            });
             
             sortedResults.forEach((result, index) => {
                 const resultCard = document.createElement('div');
-                resultCard.className = 'result-card' + (index === 0 ? ' winner' : '');
+                resultCard.className = 'result-card' + (result.isWinner ? ' winner' : '');
+                
+                // 使用預計算的距離值（如果可用），否則計算距離
+                const distance = result.distance !== undefined 
+                    ? result.distance 
+                    : Math.abs(result.inputNumber - targetNumber);
+                
                 resultCard.innerHTML = `
                     <div class="result-player-name">${this.escapeHtml(result.nickname)}</div>
-                    <div class="result-number">${result.drawnNumber}</div>
-                    <div class="result-score ${result.score < 0 ? 'negative' : ''}">${result.score >= 0 ? '+' + result.score : result.score}</div>
-                    <div class="result-rank">第 ${index + 1} 名</div>
+                    <div class="result-number">${result.inputNumber}</div>
+                    <div class="result-score ${result.isWinner ? 'winner' : ''}">${result.isWinner ? '✓ 勝利' : `距離: ${distance.toFixed(2)}`}</div>
+                    <div class="result-rank">${result.isWinner ? '🏆 本輪獲勝' : '本輪未獲勝'}</div>
                 `;
                 roundResultsList.appendChild(resultCard);
             });
@@ -1177,12 +1232,10 @@ class UIController {
         const nextRoundBtn = document.getElementById('next-round-btn');
         if (nextRoundBtn) {
             if (roundNumber >= 5) {
-                nextRoundBtn.textContent = '查看最終結果';
-                nextRoundBtn.querySelector('small').textContent = '遊戲已完成';
+                nextRoundBtn.innerHTML = '查看最終結果<small>遊戲已完成</small>';
             } else {
                 const nextRound = roundNumber + 1;
-                nextRoundBtn.textContent = '進行下一輪';
-                nextRoundBtn.querySelector('small').textContent = `開始第${nextRound}輪抽籤`;
+                nextRoundBtn.innerHTML = `進行下一輪<small>開始第${nextRound}輪抽籤</small>`;
             }
         }
     }
@@ -1403,7 +1456,7 @@ class UIController {
             winnerCard.className = 'winner-card';
             winnerCard.innerHTML = `
                 <div class="winner-nickname">${this.escapeHtml(winner.nickname)}</div>
-                <div class="winner-score">${winner.totalScore >= 0 ? '+' + winner.totalScore : winner.totalScore}</div>
+                <div class="winner-score">${winner.totalWinRounds || 0} 勝</div>
             `;
             winnersList.appendChild(winnerCard);
         });
@@ -1424,9 +1477,9 @@ class UIController {
             const rankingItem = document.createElement('div');
             rankingItem.className = 'final-ranking-item' + (player.isWinner ? ' winner' : '');
             
-            // 生成各輪得分詳情
-            const roundScoreText = player.roundScores.map((score, i) => 
-                `R${i + 1}: ${score >= 0 ? '+' + score : score}`
+            // 產生各輪狀態显示（獲勝=✓，沒獲勝=✗）
+            const roundScoreText = (player.roundScores || []).map((score, i) => 
+                `R${i + 1}: ${score > 0 ? '\u2713' : '\u2717'}`
             ).join(', ');
             
             rankingItem.innerHTML = `
@@ -1436,7 +1489,7 @@ class UIController {
                     <div class="final-ranking-details">${roundScoreText}</div>
                 </div>
                 <div class="final-ranking-score">
-                    ${player.totalScore >= 0 ? '+' + player.totalScore : player.totalScore}
+                    ${player.totalWinRounds || 0} 勝
                 </div>
             `;
             

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript 載入測試</title>
+</head>
+<body>
+    <h1>JavaScript 載入測試</h1>
+    <div id="status"></div>
+    <div id="errors"></div>
+    <div id="events"></div>
+    
+    <script>
+        // 載入前狀態
+        console.log('頁面開始載入...');
+        const statusDiv = document.getElementById('status');
+        const errorsDiv = document.getElementById('errors');
+        
+        // 錯誤收集
+        const errors = [];
+        const loadEvents = [];
+        
+        // 監控所有錯誤
+        window.addEventListener('error', function(e) {
+            console.error('載入錯誤:', e);
+            errors.push(`錯誤: ${e.message} - ${e.filename}:${e.lineno}:${e.colno}`);
+            loadEvents.push(`❌ ${new Date().toISOString()}: 錯誤 - ${e.message}`);
+            updateDisplay();
+        });
+        
+        // 監控腳本載入
+        const originalCreateElement = document.createElement;
+        document.createElement = function(tagName) {
+            const element = originalCreateElement.call(this, tagName);
+            if (tagName.toLowerCase() === 'script') {
+                element.addEventListener('load', function() {
+                    loadEvents.push(`✓ ${new Date().toISOString()}: 腳本載入完成 - ${this.src}`);
+                    console.log('腳本載入完成:', this.src);
+                    updateDisplay();
+                });
+                element.addEventListener('error', function() {
+                    loadEvents.push(`❌ ${new Date().toISOString()}: 腳本載入失敗 - ${this.src}`);
+                    console.error('腳本載入失敗:', this.src);
+                    updateDisplay();
+                });
+            }
+            return element;
+        };
+        
+        // 更新顯示的函數
+        function updateDisplay() {
+            // 顯示錯誤
+            errorsDiv.innerHTML = '<h3>錯誤:</h3>' + 
+                errors.map(err => `<p style="color: red; font-size: 12px;">${err}</p>`).join('');
+            
+            // 顯示載入事件
+            const eventsHtml = '<h3>載入事件:</h3>' + 
+                loadEvents.slice(-10).map(event => `<p style="color: blue; font-size: 12px;">${event}</p>`).join('');
+            
+            if (document.getElementById('events')) {
+                document.getElementById('events').innerHTML = eventsHtml;
+            }
+        }
+        
+        // 檢查載入狀態的函數
+        function checkLoadStatus() {
+            const status = {
+                StorageManager: typeof window.StorageManager !== 'undefined',
+                ErrorHandler: typeof window.ErrorHandler !== 'undefined', 
+                GameManager: typeof window.GameManager !== 'undefined',
+                WebRTCManager: typeof window.WebRTCManager !== 'undefined',
+                UIController: typeof window.UIController !== 'undefined',
+                GameController: typeof window.GameController !== 'undefined'
+            };
+            
+            console.log('當前載入狀態:', status);
+            
+            let html = '<h3>類別載入狀態:</h3>';
+            for (const [name, loaded] of Object.entries(status)) {
+                const color = loaded ? 'green' : 'red';
+                const symbol = loaded ? '✓' : '✗';
+                html += `<p style="color: ${color};">${symbol} ${name}: ${loaded ? '已載入' : '未載入'}</p>`;
+            }
+            
+            const loadedCount = Object.values(status).filter(Boolean).length;
+            html += `<p><strong>已載入: ${loadedCount}/6</strong></p>`;
+            
+            statusDiv.innerHTML = html;
+            
+            return status;
+        }
+        
+        // 每秒檢查一次載入狀態
+        let checkInterval = setInterval(checkLoadStatus, 1000);
+        
+        // 停止檢查的函數
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            console.log('停止檢查載入狀態');
+            checkLoadStatus(); // 最後檢查一次
+        }, 10000);
+    </script>
+    
+    <!-- 載入所有 JS 檔案 -->
+    <script src="assets/js/config-manager.js?v=20260114b"></script>
+    <script src="assets/js/storage-manager.js?v=20260114b"></script>
+    <script src="assets/js/error-handler.js?v=20260114b"></script>
+    <script src="assets/js/game-engine.js?v=20260114b"></script>
+    <script src="assets/js/webrtc-manager.js?v=20260114b"></script>
+    <script src="assets/js/ui-controller.js?v=20260114b"></script>
+    <script src="assets/js/game-controller.js?v=20260114b"></script>
+    
+    <script>
+        // 載入完成後檢查
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 觸發');
+            setTimeout(() => {
+                const finalStatus = checkLoadStatus();
+                console.log('最終載入狀態:', finalStatus);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

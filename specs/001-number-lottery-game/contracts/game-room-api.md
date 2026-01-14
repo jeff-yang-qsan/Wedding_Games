@@ -119,14 +119,14 @@
 
 ## 遊戲流程 API
 
-### 開始抽籤
-**消息類型**: `START_LOTTERY`  
+### 開始輸入數字
+**消息類型**: `START_INPUT`  
 **發送者**: 主持人
 
 ```javascript
 // Request
 {
-  type: "START_LOTTERY",
+  type: "START_INPUT",
   timestamp: "2026-01-12T12:05:00.000Z",
   senderId: "host",
   data: {
@@ -136,7 +136,7 @@
 
 // Response
 {
-  type: "LOTTERY_STARTED",
+  type: "INPUT_STARTED",
   timestamp: "2026-01-12T12:05:00.100Z",
   senderId: "system",
   data: {
@@ -147,29 +147,30 @@
 }
 ```
 
-### 參賽者抽籤
-**消息類型**: `DRAW_NUMBER`  
+### 參賽者輸入數字
+**消息類型**: `INPUT_NUMBER`  
 **發送者**: 參賽者
 
 ```javascript
 // Request
 {
-  type: "DRAW_NUMBER",
+  type: "INPUT_NUMBER",
   timestamp: "2026-01-12T12:05:10.000Z",
   senderId: "player-uuid-1",
   data: {
-    roundNumber: 1
+    roundNumber: 1,
+    inputNumber: 75  // 參賽者手動輸入的數字 (0-100)
   }
 }
 
 // Response
 {
-  type: "NUMBER_DRAWN",
+  type: "NUMBER_INPUTTED",
   timestamp: "2026-01-12T12:05:10.100Z",
   senderId: "system",
   data: {
     playerId: "player-uuid-1",
-    drawnNumber: 75,
+    inputNumber: 75,
     roundNumber: 1
   }
 }
