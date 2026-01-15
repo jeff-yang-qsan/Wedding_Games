@@ -1059,6 +1059,12 @@ small {
     color: #ef4444;
 }
 
+/* 本輪結果狀態文字 */
+.result-rank {
+    color: #10b981 !important;
+    font-weight: 600;
+}
+
 /* 最終結果慶祝樣式 */
 .winners-celebration {
     text-align: center;

@@ -540,11 +540,17 @@ class GameController {
             // 儲存遊戲狀態
             window.storageManager.saveGameRoom(window.gameManager.gameRoom);
 
-            // 更新 UI - 顯示抽籤控制介面
+            // 隱藏房間資訊和參賽者列表，顯示抽籤控制介面
+            window.uiController.hideRoomInfoForGameStart();
             window.uiController.showLotteryControl();
+            
+            // 直接開始第一輪抽籤
+            setTimeout(() => {
+                this.startLottery();
+            }, 500); // 延遲0.5秒讓UI切換完成
 
-            window.uiController.showSuccess('遊戲已開始！可以開始第一輪抽籤');
-            console.log('遊戲開始');
+            window.uiController.showSuccess('遊戲已開始！第一輪抽籤開始');
+            console.log('遊戲開始並直接進入第一輪');
 
         } catch (error) {
             console.error('開始遊戲失敗:', error);
@@ -731,7 +737,15 @@ class GameController {
             return;
         }
 
+        const nextRoundBtn = document.getElementById('next-round-btn');
+        
         try {
+            // 設置按鈕為loading狀態
+            if (nextRoundBtn) {
+                nextRoundBtn.disabled = true;
+                nextRoundBtn.innerHTML = '參賽者輸入中...<small>請等待所有參賽者輸入完畢</small>';
+            }
+
             if (window.gameManager.gameRoom.gameState === window.GameState.GAME_FINISHED) {
                 // 遊戲結束，顯示最終結果
                 this.showFinalResults();
@@ -764,8 +778,16 @@ class GameController {
                 });
             }
 
-            // 回到抽籤控制介面
-            window.uiController.showLotteryControl();
+            // 第二輪及以後直接開始抽籤，不顯示抽籤控制區塊
+            if (window.gameManager.gameRoom.currentRound >= 2) {
+                // 直接開始抽籤，不需要主持人手動點擊
+                setTimeout(() => {
+                    this.startLottery();
+                }, 1000); // 延遲1秒讓用戶看到輪數更新
+            } else {
+                // 第一輪才顯示抽籤控制介面
+                window.uiController.showLotteryControl();
+            }
             
             // 更新輪數顯示
             const currentRoundElement = document.getElementById('current-round');
@@ -779,6 +801,13 @@ class GameController {
         } catch (error) {
             console.error('進行下一輪失敗:', error);
             window.uiController.showError('進行下一輪失敗: ' + error.message);
+            
+            // 恢復按鈕狀態
+            if (nextRoundBtn) {
+                nextRoundBtn.disabled = false;
+                const nextRound = window.gameManager.gameRoom.currentRound + 1;
+                nextRoundBtn.innerHTML = `進行下一輪<small>開始第${nextRound}輪抽籤</small>`;
+            }
         }
     }
 
@@ -1110,6 +1139,27 @@ class GameController {
         if (this.isHost) {
             // 主持人：顯示本輪結果
             window.uiController.displayRoundResults(data);
+        }
+    }
+
+    /**
+     * 恢復下一輪按鈕狀態
+     */
+    restoreNextRoundButtonState() {
+        const nextRoundBtn = document.getElementById('next-round-btn');
+        if (nextRoundBtn && nextRoundBtn.disabled) {
+            nextRoundBtn.disabled = false;
+            
+            // 更新按鈕文字
+            const currentRound = window.gameManager?.gameRoom?.currentRound || 1;
+            if (currentRound >= 5) {
+                nextRoundBtn.innerHTML = '查看最終結果<small>遊戲已完成</small>';
+            } else {
+                const nextRound = currentRound + 1;
+                nextRoundBtn.innerHTML = `進行下一輪<small>開始第${nextRound}輪抽籤</small>`;
+            }
+            
+            console.log('下一輪按鈕狀態已恢復');
         }
     }
 
