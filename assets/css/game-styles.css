@@ -1,6 +1,99 @@
 /* 數字抽籤遊戲 - 響應式樣式表 */
 /* 採用 Mobile-First 設計方法 */
 
+/* ==================== 主題系統 ==================== */
+:root {
+    /* 米黃奶油色主題 (預設) */
+    --bg-gradient: linear-gradient(135deg, #f5deb3 0%, #fefefe 25%, #fffff8 75%, #deb887 100%);
+    --text-primary: #8b5a3c;
+    --text-shadow: rgba(255, 250, 240, 0.5);
+    --btn-primary-bg: linear-gradient(135deg, #daa520, #cd853f);
+    --btn-primary-border: #daa520;
+    --btn-primary-shadow: rgba(218, 165, 32, 0.3);
+    --btn-primary-hover: linear-gradient(135deg, #b8860b, #a0522d);
+    --btn-secondary-bg: linear-gradient(135deg, #d2b48c, #cd853f);
+    --btn-secondary-border: #cd853f;
+    --btn-secondary-text: #8b5a3c;
+    --btn-success-bg: #cd853f;
+    --btn-success-hover: #a0522d;
+    --btn-danger-bg: #d2691e;
+    --btn-danger-hover: #a0522d;
+    --form-border: rgba(218, 165, 32, 0.5);
+    --form-border-focus: #daa520;
+    --spinner-border: rgba(139, 90, 60, 0.3);
+    --spinner-color: #daa520;
+    --result-color: #cd853f;
+    --progress-bg: linear-gradient(90deg, #daa520, #f5deb3);
+    --card-hover-shadow: rgba(218, 165, 32, 0.3), rgba(205, 133, 63, 0.15);
+    --btn-reset-bg: linear-gradient(135deg, #8b4513, #a0522d);
+    --btn-reset-hover: linear-gradient(135deg, #654321, #8b4513);
+    --btn-cancel-bg: linear-gradient(135deg, #708090, #696969);
+    --btn-cancel-hover: linear-gradient(135deg, #556b2f, #2f4f4f);
+    --room-code-bg: rgba(255, 255, 255, 0.9);
+    --room-code-border: var(--form-border-focus);
+    --room-code-shadow: var(--btn-primary-shadow);
+}
+
+/* 確保主題變數正確應用 */
+.theme-wheat-cream {
+    --bg-gradient: linear-gradient(135deg, #f5deb3 0%, #fefefe 25%, #fffff8 75%, #deb887 100%);
+    --text-primary: #8b5a3c;
+    --text-shadow: rgba(255, 250, 240, 0.5);
+    --btn-primary-bg: linear-gradient(135deg, #daa520, #cd853f);
+    --btn-primary-border: #daa520;
+    --btn-primary-shadow: rgba(218, 165, 32, 0.3);
+    --btn-primary-hover: linear-gradient(135deg, #b8860b, #a0522d);
+    --btn-secondary-bg: linear-gradient(135deg, #d2b48c, #cd853f);
+    --btn-secondary-border: #cd853f;
+    --btn-secondary-text: #8b5a3c;
+    --btn-success-bg: #cd853f;
+    --btn-success-hover: #a0522d;
+    --btn-danger-bg: #d2691e;
+    --btn-danger-hover: #a0522d;
+    --form-border: rgba(218, 165, 32, 0.5);
+    --form-border-focus: #daa520;
+    --spinner-border: rgba(139, 90, 60, 0.3);
+    --spinner-color: #daa520;
+    --result-color: #cd853f;
+    --progress-bg: linear-gradient(90deg, #daa520, #f5deb3);
+    --card-hover-shadow: rgba(218, 165, 32, 0.3), rgba(205, 133, 63, 0.15);
+    --btn-reset-bg: linear-gradient(135deg, #8b4513, #a0522d);
+    --btn-reset-hover: linear-gradient(135deg, #654321, #8b4513);
+    --btn-cancel-bg: linear-gradient(135deg, #708090, #696969);
+    --btn-cancel-hover: linear-gradient(135deg, #556b2f, #2f4f4f);
+    --room-code-bg: rgba(255, 255, 255, 0.9);
+    --room-code-border: var(--form-border-focus);
+    --room-code-shadow: var(--btn-primary-shadow);
+}
+
+/* 浪漫粉色主題 */
+.theme-romantic-pink {
+    --bg-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 25%, #fecfef 75%, #ff9a9e 100%);
+    --text-primary: #5a82a3;
+    --text-shadow: rgba(255, 255, 255, 0.3);
+    --btn-primary-bg: linear-gradient(135deg, #ff6b9d, #ff8fab);
+    --btn-primary-border: #ff6b9d;
+    --btn-primary-shadow: rgba(255, 107, 157, 0.3);
+    --btn-primary-hover: linear-gradient(135deg, #ff5a8a, #ff7c98);
+    --btn-secondary-bg: linear-gradient(135deg, #fbb6ce, #f8a5c2);
+    --btn-secondary-border: #fbb6ce;
+    --btn-secondary-text: #5a82a3;
+    --btn-success-bg: #c2185b;
+    --btn-success-hover: #ad1457;
+    --btn-danger-bg: #ef4444;
+    --btn-danger-hover: #dc2626;
+    --form-border: rgba(255, 182, 193, 0.5);
+    --form-border-focus: #ff6b9d;
+    --spinner-border: rgba(90, 130, 163, 0.3);
+    --spinner-color: #ff6b9d;
+    --result-color: #c2185b;
+    --progress-bg: linear-gradient(90deg, #ff9a9e, #fecfef);
+    --card-hover-shadow: rgba(255, 182, 193, 0.3), rgba(219, 112, 147, 0.15);
+    --room-code-bg: rgba(255, 255, 255, 0.9);
+    --room-code-border: var(--form-border-focus);
+    --room-code-shadow: var(--btn-primary-shadow);
+}
+
 /* CSS Reset 與基礎設定 */
 * {
     margin: 0;
@@ -20,8 +113,8 @@ html {
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans TC', sans-serif;
     line-height: 1.6;
-    color: #5a82a3;
-    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 25%, #fecfef 75%, #ff9a9e 100%);
+    color: var(--text-primary);
+    background: var(--bg-gradient);
     min-height: 100vh;
     position: relative;
     overflow-x: hidden;
@@ -70,14 +163,14 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    color: #5a82a3;
+    color: var(--text-primary);
 }
 
 .loading-spinner {
     width: 60px;
     height: 60px;
-    border: 4px solid rgba(90, 130, 163, 0.3);
-    border-top: 4px solid #ff6b9d;
+    border: 4px solid var(--spinner-border);
+    border-top: 4px solid var(--spinner-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 2rem;
@@ -94,8 +187,8 @@ h1 {
     font-weight: 700;
     margin-bottom: 1rem;
     text-align: center;
-    color: #5a82a3;
-    text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    text-shadow: 0 2px 4px var(--text-shadow);
 }
 
 h2 {
@@ -123,6 +216,26 @@ small {
     color: rgba(90, 130, 163, 0.6);
     display: block;
     margin-top: 0.25rem;
+}
+
+/* 按鈕內的副標題樣式 */
+.btn small {
+    font-size: 0.875rem;
+    color: rgba(255, 248, 220, 0.8);
+    display: block;
+    margin-top: 0.25rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    opacity: 0.95;
+}
+
+/* 特定按鈕的副標題保持原藍色 */
+#toggle-detailed-status small,
+#refresh-status small,
+#show-details-btn small,
+#refresh-status-btn small {
+    color: rgba(90, 130, 163, 0.8) !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
 }
 
 /* 按鈕樣式 */
@@ -153,30 +266,64 @@ small {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #ff6b9d, #ff8fab);
-    border-color: #ff6b9d;
-    box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+    background: var(--btn-primary-bg);
+    border-color: var(--btn-primary-border);
+    box-shadow: 0 4px 15px var(--btn-primary-shadow);
     color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #ff5a8a, #ff7c98);
-    box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
+    background: var(--btn-primary-hover);
+    box-shadow: 0 6px 20px var(--btn-primary-shadow);
     transform: translateY(-2px);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #fbb6ce, #f8a5c2);
-    border-color: #fbb6ce;
-    color: #5a82a3;
-    border: 2px solid #fbb6ce;
+    background: var(--btn-secondary-bg);
+    border-color: var(--btn-secondary-border);
+    color: var(--btn-secondary-text);
+    border: 2px solid var(--btn-secondary-border);
+}
+
+/* 確保主題樣式優先級 */
+:root .btn-secondary,
+.theme-wheat-cream .btn-secondary,
+body.theme-wheat-cream .btn-secondary {
+    background: var(--btn-secondary-bg) !important;
+    border-color: var(--btn-secondary-border) !important;
+    color: var(--btn-secondary-text) !important;
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: linear-gradient(135deg, #f9a3bb, #f592a8);
-    border-color: #f9a3bb;
-    color: #5a82a3;
+    background: var(--btn-secondary-bg);
+    border-color: var(--btn-secondary-border);
+    color: var(--btn-secondary-text);
     transform: translateY(-2px);
+    filter: brightness(0.9);
+}
+
+/* 確保 hover 狀態主題樣式優先級 */
+:root .btn-secondary:hover:not(:disabled),
+.theme-wheat-cream .btn-secondary:hover:not(:disabled),
+body.theme-wheat-cream .btn-secondary:hover:not(:disabled) {
+    background: var(--btn-secondary-bg) !important;
+    border-color: var(--btn-secondary-border) !important;
+    color: var(--btn-secondary-text) !important;
+}
+
+/* 離開房間按鈕特殊樣式 */
+#leave-room-btn {
+    background: var(--btn-secondary-bg) !important;
+    border: none !important;
+    color: white !important;
+}
+
+#leave-room-btn:hover:not(:disabled) {
+    background: var(--btn-secondary-bg) !important;
+    border: none !important;
+    color: white !important;
+    transform: translateY(-2px);
+    filter: brightness(0.9);
 }
 
 .btn-large {
@@ -191,21 +338,76 @@ small {
 }
 
 .btn-success {
-    background: #c2185b;
+    background: var(--btn-success-bg);
     color: white;
 }
 
 .btn-success:hover:not(:disabled) {
-    background: #ad1457;
+    background: var(--btn-success-hover);
 }
 
 .btn-danger {
-    background: #ef4444;
+    background: var(--btn-danger-bg);
     color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: #dc2626;
+    background: var(--btn-danger-hover);
+}
+
+/* 輪廓按鈕樣式 */
+.btn-outline {
+    background: transparent;
+    border: 2px solid rgba(156, 163, 175, 0.5);
+    color: rgba(75, 85, 99, 0.9);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: rgba(156, 163, 175, 0.1);
+    border-color: rgba(156, 163, 175, 0.7);
+    color: rgba(55, 65, 81, 1);
+    transform: translateY(-2px);
+}
+
+/* 重新開始按鈕特殊樣式 */
+#reset-game-btn {
+    background: var(--btn-reset-bg) !important;
+    border-color: #8b4513 !important;
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3) !important;
+}
+
+#reset-game-btn:hover:not(:disabled) {
+    background: var(--btn-reset-hover) !important;
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+/* 取消按鈕特殊樣式 */
+#modal-cancel {
+    background: var(--btn-cancel-bg) !important;
+    border-color: #708090 !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(112, 128, 144, 0.3) !important;
+}
+
+#modal-cancel:hover:not(:disabled) {
+    background: var(--btn-cancel-hover) !important;
+    box-shadow: 0 6px 20px rgba(112, 128, 144, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+/* 重新開始遊戲按鈕特殊樣式 */
+#restart-game-btn {
+    background: var(--btn-reset-bg) !important;
+    border-color: #8b4513 !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3) !important;
+}
+
+#restart-game-btn:hover:not(:disabled) {
+    background: var(--btn-reset-hover) !important;
+    box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4) !important;
+    transform: translateY(-2px);
 }
 
 /* 按鈕群組 */
@@ -233,28 +435,29 @@ small {
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #5a82a3;
+    color: var(--text-primary);
 }
 
 .form-input {
     width: 100%;
     padding: 0.75rem;
     font-size: 1rem;
-    border: 2px solid rgba(255, 182, 193, 0.5);
+    border: 2px solid var(--form-border);
     border-radius: 0.5rem;
     background: rgba(255, 255, 255, 0.9);
-    color: #5a82a3;
+    color: var(--text-primary);
     backdrop-filter: blur(10px);
     transition: border-color 0.2s ease-in-out;
 }
 
 .form-input::placeholder {
-    color: rgba(90, 130, 163, 0.5);
+    color: var(--text-primary);
+    opacity: 0.5;
 }
 
 .form-input:focus {
     outline: none;
-    border-color: #ff6b9d;
+    border-color: var(--form-border-focus);
     background: rgba(255, 255, 255, 0.95);
 }
 
@@ -436,16 +639,16 @@ small {
 .room-code-number {
     font-size: 3rem;
     font-weight: 800;
-    color: #5a82a3;
-    background: rgba(255, 255, 255, 0.9);
-    border: 3px solid rgba(194, 24, 91, 0.4);
+    color: var(--text-primary);
+    background: var(--room-code-bg);
+    border: 3px solid var(--room-code-border);
     border-radius: 1rem;
     padding: 1rem 2rem;
     margin: 1rem 0;
     letter-spacing: 0.5rem;
     font-family: 'Courier New', monospace;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(194, 24, 91, 0.1);
+    box-shadow: 0 8px 32px var(--room-code-shadow);
 }
 
 /* 遊戲狀態顯示 */
@@ -696,16 +899,16 @@ small {
     font-size: 1.5rem;
     font-weight: 700;
     border-radius: 1rem;
-    background: linear-gradient(135deg, #ff6b9d 0%, #c2185b 100%);
+    background: var(--btn-primary-bg);
     border: none;
     color: white;
-    box-shadow: 0 8px 25px rgba(255, 107, 157, 0.3);
+    box-shadow: 0 8px 25px var(--btn-primary-shadow);
     transition: all 0.3s ease;
 }
 
 .lottery-btn:hover:not(:disabled) {
     transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(255, 107, 157, 0.4);
+    box-shadow: 0 12px 35px var(--btn-primary-shadow);
 }
 
 .lottery-btn:active:not(:disabled) {
@@ -758,15 +961,15 @@ small {
 .drawn-number-value {
     font-size: 4rem;
     font-weight: 800;
-    color: #5a82a3;
+    color: var(--text-primary);
     background: rgba(255, 255, 255, 0.1);
-    border: 3px solid rgba(194, 24, 91, 0.5);
+    border: 3px solid var(--form-border-focus);
     border-radius: 1rem;
     padding: 1rem 2rem;
     margin: 1rem auto;
     max-width: 200px;
     font-family: 'Courier New', monospace;
-    text-shadow: 0 0 10px rgba(90, 130, 163, 0.3);
+    text-shadow: 0 0 10px var(--btn-primary-shadow);
 }
 
 .result-status {
@@ -781,7 +984,7 @@ small {
 .result-status p:first-child {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #c2185b;
+    color: #cd853f;
 }
 
 /* 本輪得分區域 */
@@ -901,7 +1104,7 @@ small {
 .result-number {
     font-size: 2rem;
     font-weight: 800;
-    color: #c2185b;
+    color: #cd853f;
     margin-bottom: 0.5rem;
     font-family: 'Courier New', monospace;
 }
@@ -911,8 +1114,8 @@ small {
     font-weight: 700;
     padding: 0.5rem;
     border-radius: 0.5rem;
-    background: rgba(194, 24, 91, 0.2);
-    color: #c2185b;
+    background: rgba(205, 133, 63, 0.2);
+    color: #cd853f;
 }
 
 .result-score.negative {
@@ -2141,11 +2344,11 @@ body::before {
 
 /* 添加更多花瓣變化 */
 .petal.pink {
-    background: linear-gradient(45deg, #ffcccb, #ffb6c1);
+    background: linear-gradient(45deg, #ffb6c1, #ffc0cb);
 }
 
 .petal.pink::before {
-    background: linear-gradient(45deg, #ffc0cb, #ff91a4);
+    background: linear-gradient(45deg, #ff91a4, #ffb6c1);
 }
 
 .petal.rose {
@@ -2221,20 +2424,19 @@ body::before {
 
 .card:hover {
     box-shadow: 
-        0 12px 48px rgba(255, 182, 193, 0.3),
-        0 4px 12px rgba(219, 112, 147, 0.15);
+        0 12px 48px var(--card-hover-shadow);
 }
 
 /* 按鈕樣式調整 */
 .btn-primary {
-    background: linear-gradient(135deg, #ff6b9d, #ff8fab);
-    border-color: #ff6b9d;
-    box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+    background: linear-gradient(135deg, #daa520, #cd853f);
+    border-color: #daa520;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #ff5a8a, #ff7c98);
-    box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
+    background: linear-gradient(135deg, #b8860b, #a0522d);
+    box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4);
     transform: translateY(-2px);
 }
 
@@ -2274,7 +2476,7 @@ body::before {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #ff9a9e, #fecfef);
+    background: linear-gradient(90deg, #daa520, #f5deb3);
     border-radius: 4px;
     transition: width 0.3s ease;
     width: 0%;
@@ -2282,7 +2484,7 @@ body::before {
 
 .small-text {
     font-size: 0.9rem;
-    color: rgba(90, 130, 163, 0.8);
+    color: rgba(139, 90, 60, 0.8);
     line-height: 1.4;
     margin-top: 1rem;
 }

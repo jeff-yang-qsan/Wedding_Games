@@ -11,7 +11,7 @@
     }
   },
   "ui": {
-    "theme": "romantic-pink",
-    "comment": "未來可以擴展其他主題配置"
+    "theme": "wheat-cream",
+    "comment": "未來可以擴展其他主題配置，可選: romantic-pink, wheat-cream"
   }
 }

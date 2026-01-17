@@ -15,7 +15,7 @@ class ConfigManager {
                 }
             },
             ui: {
-                theme: "romantic-pink"
+                theme: "wheat-cream"
             }
         };
     }
@@ -30,15 +30,19 @@ class ConfigManager {
             if (!response.ok) {
                 console.warn('無法載入配置檔案，使用預設配置');
                 this.config = this.defaultConfig;
-                return this.config;
+            } else {
+                this.config = await response.json();
+                console.log('✅ 配置檔案載入成功:', this.config);
             }
             
-            this.config = await response.json();
-            console.log('✅ 配置檔案載入成功:', this.config);
+            // 自動應用主題
+            this.applyTheme();
+            
             return this.config;
         } catch (error) {
             console.warn('載入配置檔案時發生錯誤，使用預設配置:', error);
             this.config = this.defaultConfig;
+            this.applyTheme();
             return this.config;
         }
     }
@@ -107,7 +111,23 @@ class ConfigManager {
      * @returns {string}
      */
     getTheme() {
-        return this.get('ui.theme') || 'romantic-pink';
+        return this.get('ui.theme') || 'wheat-cream';
+    }
+
+    /**
+     * 應用主題配色
+     */
+    applyTheme() {
+        const theme = this.getTheme();
+        const body = document.body;
+        
+        // 移除舊的主題類別
+        body.classList.remove('theme-romantic-pink', 'theme-wheat-cream');
+        
+        // 添加新的主題類別
+        body.classList.add(`theme-${theme}`);
+        
+        console.log(`🎨 已應用主題: ${theme}`);
     }
 
     /**

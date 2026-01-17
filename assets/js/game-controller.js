@@ -780,10 +780,13 @@ class GameController {
 
             // 第二輪及以後直接開始抽籤，不顯示抽籤控制區塊
             if (window.gameManager.gameRoom.currentRound >= 2) {
-                // 直接開始抽籤，不需要主持人手動點擊
-                setTimeout(() => {
-                    this.startLottery();
-                }, 1000); // 延遲1秒讓用戶看到輪數更新
+                // 檢查當前狀態，避免重複調用
+                if (window.gameManager.gameRoom.gameState !== 'lottery_in_progress') {
+                    // 直接開始抽籤，不需要主持人手動點擊
+                    setTimeout(() => {
+                        this.startLottery();
+                    }, 1000); // 延遲1秒讓用戶看到輪數更新
+                }
             } else {
                 // 第一輪才顯示抽籤控制介面
                 window.uiController.showLotteryControl();
@@ -1363,7 +1366,9 @@ class GameController {
             }, playerId);
 
             // 更新主持人界面
-            window.uiController.displayPlayersList(window.gameManager.getPlayersList());
+            const currentPlayers = window.gameManager.getPlayersList();
+            window.uiController.displayPlayersList(currentPlayers);
+            window.uiController.updatePlayerCount(currentPlayers.length, window.gameManager.gameRoom.maxPlayers);
             window.uiController.showSuccess(`${newPlayer.nickname} 已加入房間`);
 
         } catch (error) {
@@ -1427,7 +1432,9 @@ class GameController {
         
         if (this.isHost) {
             // 更新主持人介面的參賽者列表
-            window.uiController.displayPlayersList(window.gameManager.getPlayersList());
+            const currentPlayers = window.gameManager.getPlayersList();
+            window.uiController.displayPlayersList(currentPlayers);
+            window.uiController.updatePlayerCount(currentPlayers.length, window.gameManager.gameRoom.maxPlayers);
         }
     }
 
@@ -1440,7 +1447,9 @@ class GameController {
         
         if (this.isHost) {
             // 更新主持人介面的參賽者列表
-            window.uiController.displayPlayersList(window.gameManager.getPlayersList());
+            const currentPlayers = window.gameManager.getPlayersList();
+            window.uiController.displayPlayersList(currentPlayers);
+            window.uiController.updatePlayerCount(currentPlayers.length, window.gameManager.gameRoom.maxPlayers);
         }
     }
 }
